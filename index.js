@@ -346,7 +346,7 @@ app.post("/register", async (req, res, next) => {
     return res.status(200).send(session);
   }
 
-  return res.status(401).send("USEREXISTS");
+  return res.status(403).send("USEREXISTS");
 });
 
 /**
@@ -362,7 +362,7 @@ app.post("/login", async (req, res, next) => {
     return res.status(200).send(session);
   }
 
-  return res.status(401).send("INVALID");
+  return res.status(403).send("INVALID");
 });
 
 /**
@@ -378,7 +378,7 @@ app.post("/updatepassword", async (req, res, next) => {
 
   //failed OTP check
   if (!userID) {
-    return res.status(401).send("FAILURE");
+    return res.status(403).send("FAILURE");
   }
 
   //send updated hash to database
@@ -394,7 +394,7 @@ app.post("/updatepassword", async (req, res, next) => {
     }
     return res.status(200).send("SUCCESS");
   }
-  return res.status(401).send("FAILURE");
+  return res.status(403).send("FAILURE");
   
 });
 
@@ -441,7 +441,7 @@ app.get("/verify", async (req, res, next) => {
       expires: token.expires
     });
   }
-  return res.status(401).send("INVALIDTOKEN");
+  return res.status(403).send("INVALIDTOKEN");
 });
 
 app.use((req, res, next) => {
