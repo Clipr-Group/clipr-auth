@@ -8,39 +8,70 @@ const bodyParser = require('body-parser');
 app.use(bodyParser.json());
 
 //token stuff
-const fs   = require('fs');
-const jwt  = require('jsonwebtoken');
-const privateKEY  = fs.readFileSync('./auth_priv.key', 'utf8');
-const publicKEY  = fs.readFileSync('./auth_pub.key', 'utf8');
-const issuer  = 'Clipr';          // Issuer 
-const subject = 'clipr.app'
+const { SHA256 } = require("crypto-js")
+const { v4: uuidv4 } = require('uuid');
 
 //DyanmoDB stuff
 const { DynamoDB } = require("@aws-sdk/client-dynamodb");
 const { marshall, unmarshall } = require("@aws-sdk/util-dynamodb");
 const REGION = process.env.AWS_REGION;
 const users_table = "clipr-auth-users";
-const token_blacklist_table = "clipr-auth-token-blacklist";
+const session_table = "clipr-auth-sessions";
 const dynamo = new DynamoDB({ region: REGION })
 
-function createToken(email, version) {
-  //default token payload
-  var payload = {
-    version: version
-  };
-  var signOptions = {
-    issuer:  issuer,
-    subject:  subject,
-    audience:  email,
-    expiresIn:  "8h",
-    algorithm:  "RS256"
-  };
-
-  return jwt.sign(payload, privateKEY, signOptions)
+//helper function to generate UUID's for users
+const generateId = (userId) => {
+  const hashInput = `${Date.now()}${userId}${Math.floor(Math.random() * 100000)}`
+  const generatedId = SHA256(hashInput, { outputLength: 32 }).toString()
+  return generatedId
 }
 
-async function createUser(email, hash) {
+/**
+ * Creates a new Session
+ * @param {String} userID 
+ * @returns session info or false
+ */
+async function createSession(userID) {
+  // Generate Session ID based on User ID
+  const sessionID = generateId(userID)
+  const currentTime = Date.now()
+
+  // Item to store in the database
+  const sessionInfo = {
+    sessionID: sessionID, // Primary Key
+    userID: userID,
+    sessionStartTimestamp: currentTime, // Time the sesion was created
+    isActive: true, // Whether the session is Active
+    expires: currentTime + 1000 * 60 * 60 * 24 * 30, // Set expiry date of session to 30 days from now
+  }
+
+  //wait for dynamo to store and return the result
+  var p = new Promise((resolve, reject) => {
+    dynamo.putItem({
+      TableName: session_table,
+      Item: marshall(sessionInfo), // The Item we want to add
+    }, function(err) {
+      if (err) {
+        resolve(false)
+      } else {
+        resolve(sessionInfo)
+      }
+    })
+  })
+  
+  return await p;
+}
+
+/**
+ * Creates a new user
+ * @param {String} email 
+ * @param {String} hash //password hash 
+ * @param {String} userID 
+ * @returns BOOL indicating whether user was created or not
+ */
+async function createUser(email, hash, userID) {
   const user = {
+    userID: userID,
     email: email,
     passhash: hash
   }
@@ -49,7 +80,7 @@ async function createUser(email, hash) {
     dynamo.putItem({
       TableName: users_table,
       Item: marshall(user),
-      ConditionExpression: 'attribute_not_exists(email)'
+      ConditionExpression: 'attribute_not_exists(email) AND attribute_not_exists(userID)'
     }, function(err) {
       if (err) {
         console.log("USER EXISTS");
@@ -63,8 +94,15 @@ async function createUser(email, hash) {
   return await p;
 }
 
-async function updatePassword(email, hash) {
-  const key = marshall({ email: email })
+/**
+ * Updates the users password
+ * @param {String} userID 
+ * @param {String} hash //new password hash
+ * @returns dynamo response
+ */
+async function updatePassword(userID, hash) {
+
+  const key = marshall({ userID: userID })
 
   return await dynamo.updateItem({
     TableName: users_table,
@@ -76,11 +114,33 @@ async function updatePassword(email, hash) {
   });
 }
 
+/**
+ * Stores Password reset OTP in database
+ * @param {String} email 
+ * @param {String} otp 
+ * @returns Dyanamo Response
+ */
 async function storeOTP(email, otp) {
-  const key = marshall({ email: email })
   const now = new Date()
   now.setMinutes(now.getMinutes() + 10) // add 10 mins for OTP validity
   const time = now.toUTCString();
+
+  const response = await dynamo.query({
+    TableName: users_table,
+    IndexName: 'email-index',
+    KeyConditionExpression: 'email = :e',
+    ExpressionAttributeValues: {
+        ':e': { 'S': email }
+    },
+  })
+
+  //return nothing if no user found
+  if (!response.Items) {
+    return {}
+  }
+
+  const userID = response.Items[0].userID.S
+  const key = marshall({ userID: userID })
 
   return await dynamo.updateItem({
     TableName: users_table,
@@ -94,69 +154,253 @@ async function storeOTP(email, otp) {
 
 }
 
-async function invalidateToken(email) {
-  const key = marshall({ email: email })
+/**
+ * Checks whether a password hash is equal to the one in database
+ * @param {String} email 
+ * @param {String} hash 
+ * @returns userID or nothing
+ */
+async function checkPassword(email, hash) {
 
-  return await dynamo.updateItem({
-    TableName: token_blacklist_table,
-    Key: key,
-    UpdateExpression: "SET tokenversion = :t",
-    ExpressionAttributeValues: marshall({
-      ":t": 1
-    })
+  const response = await dynamo.query({
+    TableName: users_table,
+    IndexName: 'email-index',
+    KeyConditionExpression: 'email = :e',
+    ExpressionAttributeValues: {
+        ':e': { 'S': email }
+    },
   })
+
+  //break if no email maatch
+  if (!response.Items) {
+    return {}
+  }
+
+  //password match condition
+  if (hash === response.Items[0].passhash.S) {
+    //send the userID back
+    return response.Items[0].userID.S
+  }
+
+  //return nothing if hash doesnt match
+  return {}
 }
 
+/**
+ * Checks OTP validity to see if it matches whats in database and its not yet expired
+ * @param {String} email 
+ * @param {String} otp 
+ * @returns userID or nothing
+ */
+async function checkOTP(email, otp) {
 
+  const response = await dynamo.query({
+    TableName: users_table,
+    IndexName: 'email-index',
+    KeyConditionExpression: 'email = :e',
+    ExpressionAttributeValues: {
+        ':e': { 'S': email }
+    },
+  })
+
+  //break if no email maatch
+  if (!response.Items) {
+    return {}
+  }
+
+  //OTP match condition
+  if (otp === response.Items[0].otp.S) {
+    //send the userID back
+    return response.Items[0].userID.S
+  }
+
+  //return nothing if hash doesnt match
+  return {}
+}
+
+/**
+ * Fetches all the current sessions of the inputted userID
+ * @param {String} userID 
+ * @returns Array of sessionID's
+ */
+async function getSessions(userID) {
+
+  const response = await dynamo.query({
+    TableName: session_table,
+    IndexName: 'userID-index',
+    KeyConditionExpression: 'userID = :u',
+    ExpressionAttributeValues: {
+        ':u': { 'S': userID }
+    },
+  })
+
+  //break if no sessions returned
+  if (!response.Items) {
+    return {}
+  }
+
+  var sessions = []
+  //format sessions
+  response.Items.forEach((session) => {
+    sessions.push(session.sessionID.S)
+  });
+  return sessions;
+}
+
+/**
+ * Verifies that the session token is legitimate and refreshes
+ * @param {String} sessionID 
+ * @returns updated session or nothing
+ */
+async function verifyToken(sessionID) {
+  const key = marshall({ sessionID: sessionID })
+  const currentTime = Date.now()
+  const response = await dynamo.getItem({
+    TableName: session_table,
+    Key: key,
+  })
+  
+  //break if no token found
+  if (!response.Item) {
+    return {}
+  }
+
+  let session = unmarshall(response.Item)
+
+  //expired token logic
+  if (currentTime >= session.expires) {
+    if (session.isActive) {
+      // invalidate session if session is active and it is expired
+      dynamo.updateItem({
+        TableName: session_table,
+        Key: key,
+        UpdateExpression: "SET isActive = :isActive",
+        ExpressionAttributeValues: marshall({
+          isActive: false,
+        }),
+      })
+      
+      // return update session info
+      return { ...session, isActive: false }
+    }
+    
+    return session
+  }
+
+  //otherwise return session with new expiry date
+  const newExpires = currentTime + 1000 * 60 * 60 * 24 * 30 // 30 days from now
+  // extend session
+  dynamo.updateItem({
+    TableName: session_table,
+    Key: key,
+    UpdateExpression: "SET expires = :expires",
+    ExpressionAttributeValues: marshall({
+      ":expires": newExpires,
+    }),
+  })
+
+  // return session info with new expiry date
+  return { ...session, expires: newExpires }
+}
+
+/**
+ * Invalidates a session
+ * @param {String} sessionID 
+ * @returns Session Attributes
+ */
+async function invalidateSession(sessionID) {
+  const key = marshall({ sessionID: sessionID })
+  const session = await dynamo.updateItem({
+    TableName: session_table,
+    Key: key,
+    UpdateExpression: "SET isActive = :isActive",
+    ExpressionAttributeValues: marshall({
+      ":isActive": false,
+    }),
+    ReturnValues: "ALL_NEW",
+  })
+  console.log(session.Attributes)
+  return unmarshall(session.Attributes)
+}
+
+/**
+ * Base Path
+ */
 app.get("/", (req, res, next) => {
   return res.status(200).json({
     message: "Hello from root!",
   });
 });
 
+/**
+ * Registers a new user
+ */
 app.post("/register", async (req, res, next) => {
   const email = req.body.email
   const hash = req.body.passhash
-
-  const created = await createUser(email, hash);
-  console.log(created)
+  const userID = uuidv4()
+  const created = await createUser(email, hash, userID);
   if (created) {
     // ISSUING TOKEN ON SUCCESS
-    var token = createToken(email, 1);
-    return res.status(200).send(token);
+    var session = await createSession(userID)
+    return res.status(200).send(session);
   }
 
   return res.status(401).send("USEREXISTS");
 });
 
+/**
+ * Logs in a user
+ */
+app.post("/login", async (req, res, next) => {
+  const email = req.body.email
+  const hash = req.body.passhash
+  const userID = await checkPassword(email, hash);
+  if (userID) {
+    // ISSUING TOKEN ON SUCCESS
+    var session = await createSession(userID)
+    return res.status(200).send(session);
+  }
+
+  return res.status(401).send("INVALID");
+});
+
+/**
+ * Updates a users password
+ */
 app.post("/updatepassword", async (req, res, next) => {
   const email = req.body.email
   const hash = req.body.passhash
   const otp = req.body.otp
 
   //do some otp verification logic here
-  const key = marshall({ email: email })
-  const response = await dynamo.getItem({
-    TableName: users_table,
-    Key: key,
-  })
+  const userID = await checkOTP(email, otp)
 
-  var result = unmarshall(response.Item)
-
+  //failed OTP check
+  if (!userID) {
+    return res.status(401).send("FAILURE");
+  }
 
   //send updated hash to database
-  const updated = await updatePassword(email, hash);
+  const updated = await updatePassword(userID, hash);
   if (updated) {
-    //grab current token version
-    
-    //invalidate token version
-
+    //invalidate current sessions
+    //grab current sessions under their id
+    const sessions = await getSessions(userID)
+    if (sessions.length > 0) {
+      sessions.forEach((session) => {
+        invalidateSession(session)
+      })
+    }
     return res.status(200).send("SUCCESS");
   }
   return res.status(401).send("FAILURE");
   
 });
 
+/**
+ * Sends the user a one time OTP that expires in 10 mins
+ */
 app.post("/sendotp", async (req, res, next) => {
   const email = req.body.email
 
@@ -176,17 +420,28 @@ app.post("/sendotp", async (req, res, next) => {
   return res.status(200).send("SUCCESS");
 });
 
+/**
+ * Debug endpoint for development
+ */
 app.get("/getToken", (req, res, next) => {
-  
   // SIGNING OPTIONS
   var token = createToken("kooshpatel@gmail.com", 1)
   return res.status(200).send(token);
 });
 
-app.get("/verifyToken", (req, res, next) => {
-  const token = req.headers.authorization.split(' ')[1] 
-  var legit = jwt.verify(token, publicKEY)
-  return res.status(200).send(legit);
+/**
+ * Verifies a token is legitimate
+ */
+app.get("/verify", async (req, res, next) => {
+  const sessionID = req.headers.authorization.split(' ')[1]
+  const token = await verifyToken(sessionID)
+  if (token.isActive) {
+    return res.status(200).send({
+      isActive: token.isActive,
+      expires: token.expires
+    });
+  }
+  return res.status(401).send("INVALIDTOKEN");
 });
 
 app.use((req, res, next) => {
