@@ -83,7 +83,8 @@ async function createUser(email, hash, userID) {
       ConditionExpression: 'attribute_not_exists(email) AND attribute_not_exists(userID)'
     }, function(err) {
       if (err) {
-        console.log("USER EXISTS");
+        console.log('CREATE USER ERROR:');
+        console.log(err);
         resolve(false)
       } else {
         resolve(true)
