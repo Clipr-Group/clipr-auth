@@ -31,7 +31,7 @@ const generateId = (userId) => {
  * @param {String} userID 
  * @returns session info or false
  */
-async function createSession(userID) {
+async function createSession(userID, type) {
   // Generate Session ID based on User ID
   const sessionID = generateId(userID)
   const currentTime = Date.now()
@@ -43,6 +43,7 @@ async function createSession(userID) {
     sessionStartTimestamp: currentTime, // Time the sesion was created
     isActive: true, // Whether the session is Active
     expires: currentTime + 1000 * 60 * 60 * 24 * 30, // Set expiry date of session to 30 days from now
+    type: type
   }
 
   //wait for dynamo to store and return the result
@@ -67,13 +68,15 @@ async function createSession(userID) {
  * @param {String} email 
  * @param {String} hash //password hash 
  * @param {String} userID 
+ * @param {String} type
  * @returns BOOL indicating whether user was created or not
  */
-async function createUser(email, hash, userID) {
+async function createUser(email, hash, userID, type) {
   const user = {
     userID: userID,
     email: email,
-    passhash: hash
+    passhash: hash,
+    type: type
   }
 
   var p = new Promise((resolve, reject) => {
@@ -180,7 +183,7 @@ async function checkPassword(email, hash) {
   //password match condition
   if (hash === response.Items[0].passhash.S) {
     //send the userID back
-    return response.Items[0].userID.S
+    return [response.Items[0].userID.S, response.Items[0].type.S]
   }
 
   //return nothing if hash doesnt match
@@ -340,10 +343,15 @@ app.post("/register", async (req, res, next) => {
   const email = req.body.email
   const hash = req.body.passhash
   const userID = uuidv4()
-  const created = await createUser(email, hash, userID);
+  const type = req.body.type
+  console.log(type)
+  if (type != 'barber' && type != 'client') {
+    return res.status(403).send("ERROR");
+  }
+  const created = await createUser(email, hash, userID, type);
   if (created) {
     // ISSUING TOKEN ON SUCCESS
-    var session = await createSession(userID)
+    var session = await createSession(userID, type)
     return res.status(200).send(session);
   }
 
@@ -356,10 +364,10 @@ app.post("/register", async (req, res, next) => {
 app.post("/login", async (req, res, next) => {
   const email = req.body.email
   const hash = req.body.passhash
-  const userID = await checkPassword(email, hash);
-  if (userID) {
+  var userID = await checkPassword(email, hash);
+  if (userID[0]) {
     // ISSUING TOKEN ON SUCCESS
-    var session = await createSession(userID)
+    var session = await createSession(userID[0], userID[1])
     return res.status(200).send(session);
   }
 
@@ -415,8 +423,8 @@ app.post("/sendotp", async (req, res, next) => {
   console.log(OTP)
   const stored = await storeOTP(email, OTP)
 
-  //TODO
-  //email to user
+  //TODO email to user
+ 
 
   return res.status(200).send("SUCCESS");
 });
@@ -439,7 +447,7 @@ app.get("/verify", async (req, res, next) => {
   if (token.isActive) {
     return res.status(200).send({
       isActive: token.isActive,
-      expires: token.expires
+      expires: token.expires,
     });
   }
   return res.status(403).send("INVALIDTOKEN");
