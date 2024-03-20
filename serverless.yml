@@ -1,13 +1,22 @@
 service: clipr-auth
 frameworkVersion: '3'
 
+custom:
+  secrets: ${file(secrets.json)}
+
 provider:
   name: aws
   runtime: nodejs18.x
   region: us-east-1
-  stage: "production"
   architecture: arm64
-
+  stage: "production"
+  environment: 
+    NODE_ENV: ${self:custom.secrets.NODE_ENV}
+    PGHOST: ${self:custom.secrets.PGHOST}
+    PGPORT: ${self:custom.secrets.PGPORT}
+    PGDATABASE: ${self:custom.secrets.PGDATABASE}
+    PGUSER: ${self:custom.secrets.PGUSER}
+    PGPASSWORD: ${self:custom.secrets.PGPASSWORD}
 
 functions:
   api:

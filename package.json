@@ -9,8 +9,8 @@
     "crypto-js": "^4.1.1",
     "express": "^4.18.2",
     "fs": "^0.0.1-security",
-    "jsonwebtoken": "^9.0.0",
     "offline": "^0.0.1",
+    "postgres": "^3.4.3",
     "serverless": "^3.27.0",
     "serverless-http": "^3.1.1",
     "uuid": "^9.0.0"
