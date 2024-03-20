@@ -13,19 +13,25 @@ app.use(bodyParser.json());
 const { SHA256 } = require("crypto-js")
 const { v4: uuidv4 } = require('uuid');
 
-//DyanmoDB stuff
-const { DynamoDB } = require("@aws-sdk/client-dynamodb");
-const { marshall, unmarshall } = require("@aws-sdk/util-dynamodb");
-const REGION = process.env.AWS_REGION;
-const users_table = "clipr-auth-users";
-const session_table = "clipr-auth-sessions";
-const dynamo = new DynamoDB({ region: REGION })
 
-//helper function to generate session id's for users
+/**
+ * 
+ * @param {String} userId 
+ * @returns {String} random id
+ */
 const generateId = (userId) => {
   const hashInput = `${Date.now()}${userId}${Math.floor(Math.random() * 100000)}`
   const generatedId = SHA256(hashInput, { outputLength: 32 }).toString()
   return generatedId
+}
+
+async function createDevice(device_id, device_type) {
+  return await sql`
+    INSERT INTO devices ${sql({
+      device_id: device_id,
+      device_type: device_type
+    })} ON CONFLICT (device_id) DO NOTHING
+  `;
 }
 
 /**
@@ -33,7 +39,7 @@ const generateId = (userId) => {
  * @param {String} userID 
  * @returns session info or false
  */
-const generateSession = (userID) => {
+const generateSessionDetails = (userID, device_id) => {
   // Generate Session ID based on User ID
   const sessionID = generateId(userID)
   const currentTime = Date.now()
@@ -42,32 +48,32 @@ const generateSession = (userID) => {
   const sessionInfo = {
     sid: sessionID, // Primary Key
     uid: userID,
-    active: true,
-    last_active: currentTime
+    last_active: currentTime,
+    device_id: device_id
   };
 
   return sessionInfo;
 }
 
+async function createSession(userID, device_id, device_type) {
+  //create a device
+  const device = await createDevice(device_id, device_type);
+  // generate session details
+  const sessionDetails = generateSessionDetails(userID, device_id);
+  // write to sessions table
+  return await sql`
+    INSERT INTO sessions ${sql(sessionDetails)}
+    RETURNING sid
+  `;
+}
 
-/**
- * Updates the users password
- * @param {String} userID 
- * @param {String} hash //new password hash
- * @returns dynamo response
- */
-async function updatePassword(userID, hash) {
-
-  const key = marshall({ userID: userID })
-
-  return await dynamo.updateItem({
-    TableName: users_table,
-    Key: key,
-    UpdateExpression: "SET passhash = :h",
-    ExpressionAttributeValues: marshall({
-      ":h": hash,
-    }),
-  });
+async function createUser(email) {
+  return await sql`
+    INSERT INTO users ${sql({
+      stylist: false,
+      email: email,
+    })} RETURNING uid
+  `;
 }
 
 /**
@@ -77,101 +83,34 @@ async function updatePassword(userID, hash) {
  * @returns Dyanamo Response
  */
 async function storeOTP(email, otp) {
-  const now = new Date()
-  now.setMinutes(now.getMinutes() + 10) // add 10 mins for OTP validity
-  const time = now.toUTCString();
+  
 
-  const response = await dynamo.query({
-    TableName: users_table,
-    IndexName: 'email-index',
-    KeyConditionExpression: 'email = :e',
-    ExpressionAttributeValues: {
-        ':e': { 'S': email }
-    },
-  })
-
-  //return nothing if no user found
-  if (!response.Items) {
-    return {}
-  }
-
-  const userID = response.Items[0].userID.S
-  const key = marshall({ userID: userID })
-
-  return await dynamo.updateItem({
-    TableName: users_table,
-    Key: key,
-    UpdateExpression: "SET otp = :o, otptime = :t",
-    ExpressionAttributeValues: marshall({
-      ":o": otp,
-      ":t": time
-    }),
-  });
-
-}
-
-/**
- * Checks whether a password hash is equal to the one in database
- * @param {String} email 
- * @param {String} hash 
- * @returns userID or nothing
- */
-async function checkPassword(email, hash) {
-
-  const response = await dynamo.query({
-    TableName: users_table,
-    IndexName: 'email-index',
-    KeyConditionExpression: 'email = :e',
-    ExpressionAttributeValues: {
-        ':e': { 'S': email }
-    },
-  })
-
-  //break if no email maatch
-  if (!response.Items) {
-    return {}
-  }
-
-  //password match condition
-  if (hash === response.Items[0].passhash.S) {
-    //send the userID back
-    return [response.Items[0].userID.S, response.Items[0].type.S]
-  }
-
-  //return nothing if hash doesnt match
-  return {}
 }
 
 /**
  * Checks OTP validity to see if it matches whats in database and its not yet expired
  * @param {String} email 
  * @param {String} otp 
- * @returns userID or nothing
+ * @returns {Boolean} validation result
  */
-async function checkOTP(email, otp) {
+async function validateOTP(email, otp) {
+  var p = new Promise((resolve, reject) => {
+    sql`
+      SELECT otp.code, otp.expires FROM users
+      JOIN otp on users.uid = otp.uid
+      WHERE users.email = ${email}
+    `.then((code) => {
+      if (code[0].code === otp && Date.now() < new Date(code[0].expires).getTime()) {
+        resolve(true);
+      } else {
+        resolve(false);
+      }
+    }).catch((err) => {
+      reject(err);
+    });
+  });
 
-  const response = await dynamo.query({
-    TableName: users_table,
-    IndexName: 'email-index',
-    KeyConditionExpression: 'email = :e',
-    ExpressionAttributeValues: {
-        ':e': { 'S': email }
-    },
-  })
-
-  //break if no email maatch
-  if (!response.Items) {
-    return {}
-  }
-
-  //OTP match condition
-  if (otp === response.Items[0].otp.S) {
-    //send the userID back
-    return response.Items[0].userID.S
-  }
-
-  //return nothing if hash doesnt match
-  return {}
+  return await p;
 }
 
 /**
@@ -181,26 +120,7 @@ async function checkOTP(email, otp) {
  */
 async function getSessions(userID) {
 
-  const response = await dynamo.query({
-    TableName: session_table,
-    IndexName: 'userID-index',
-    KeyConditionExpression: 'userID = :u',
-    ExpressionAttributeValues: {
-        ':u': { 'S': userID }
-    },
-  })
-
-  //break if no sessions returned
-  if (!response.Items) {
-    return {}
-  }
-
-  var sessions = []
-  //format sessions
-  response.Items.forEach((session) => {
-    sessions.push(session.sessionID.S)
-  });
-  return sessions;
+  
 }
 
 /**
@@ -209,54 +129,32 @@ async function getSessions(userID) {
  * @returns updated session or nothing
  */
 async function verifyToken(sessionID) {
-  const key = marshall({ sessionID: sessionID })
-  const currentTime = Date.now()
-  const response = await dynamo.getItem({
-    TableName: session_table,
-    Key: key,
-  })
   
+  var currentTime = Date.now()
   //break if no token found
-  if (!response.Item) {
-    return {}
-  }
+  
 
-  let session = unmarshall(response.Item)
+  
 
   //expired token logic
-  if (currentTime >= session.expires) {
-    if (session.isActive) {
+  
       // invalidate session if session is active and it is expired
-      dynamo.updateItem({
-        TableName: session_table,
-        Key: key,
-        UpdateExpression: "SET isActive = :isActive",
-        ExpressionAttributeValues: marshall({
-          isActive: false,
-        }),
-      })
+      
       
       // return update session info
-      return { ...session, isActive: false }
-    }
+      
     
-    return session
-  }
+    
+   
+  
 
   //otherwise return session with new expiry date
   const newExpires = currentTime + 1000 * 60 * 60 * 24 * 30 // 30 days from now
   // extend session
-  dynamo.updateItem({
-    TableName: session_table,
-    Key: key,
-    UpdateExpression: "SET expires = :expires",
-    ExpressionAttributeValues: marshall({
-      ":expires": newExpires,
-    }),
-  })
+  
 
   // return session info with new expiry date
-  return { ...session, expires: newExpires }
+ 
 }
 
 /**
@@ -265,18 +163,7 @@ async function verifyToken(sessionID) {
  * @returns Session Attributes
  */
 async function invalidateSession(sessionID) {
-  const key = marshall({ sessionID: sessionID })
-  const session = await dynamo.updateItem({
-    TableName: session_table,
-    Key: key,
-    UpdateExpression: "SET isActive = :isActive",
-    ExpressionAttributeValues: marshall({
-      ":isActive": false,
-    }),
-    ReturnValues: "ALL_NEW",
-  })
-  console.log(session.Attributes)
-  return unmarshall(session.Attributes)
+  //set active to false
 }
 
 /**
@@ -290,85 +177,69 @@ app.get("/", (req, res, next) => {
 
 /**
  * Registers a new user
+ * @param {String} email
+ * @returns session id
  */
-app.post("/register", async (req, res, next) => {
+app.post("/register/email", async (req, res, next) => {
   //body validation
   if (typeof(req.body.email) !== 'string' || !emailregex.test(req.body.email)) {
     return res.status(400).json({ error: 'Invalid Email' });
   }
 
-  //create a user
-  const user = await sql`
-    INSERT INTO users ${sql({
-      stylist: false,
-      email: req.body.email,
-    })} RETURNING uid
-  `.catch((err) => next(err));
-
-  // generate session details
-  const sessionDetails = generateSession(user[0].uid);
-  // write to sessions table
-  const session = await sql`
-    INSERT INTO sessions ${sql(sessionDetails)}
-    RETURNING sid
-  `.catch((err) => next(err));
+  var user;
+  var session;
+  try {
+    //create a user
+    user = await createUser(req.body.email);
+    //create a session
+    session = await createSession(user[0].uid, req.body.device_id, req.body.device_type);
+  } catch (err) {
+    next(err);
+    return;
+  }
   
   return res.status(200).send(session[0]);
 });
 
 /**
- * Logs in a user
+ * login method for email with otp
+ * @param {String} email
+ * @param {String} otp
+ * @param {String} device_id
+ * @param {String} device_type
+ * @returns session id or error
  */
-app.post("/login", async (req, res, next) => {
-  const email = req.body.email
-  const hash = req.body.passhash
-  var userID = await checkPassword(email, hash);
-  if (userID[0]) {
-    // ISSUING TOKEN ON SUCCESS
-    var session = await createSession(userID[0], userID[1])
-    return res.status(200).send(session);
+app.post("/login/email", async (req, res, next) => {
+  //body validation
+  if (typeof(req.body.email) !== 'string' || !emailregex.test(req.body.email)) {
+    return res.status(400).json({ error: 'Invalid Email' });
+  }
+  if (typeof(req.body.otp) !== 'string' || req.body.otp.length !== 6) {
+    return res.status(400).json({ error: 'Invalid OTP' });
   }
 
-  return res.status(403).send("INVALID");
-});
-
-/**
- * Updates a users password
- */
-app.post("/updatepassword", async (req, res, next) => {
-  const email = req.body.email
-  const hash = req.body.passhash
-  const otp = req.body.otp
-
-  //do some otp verification logic here
-  const userID = await checkOTP(email, otp)
-
-  //failed OTP check
-  if (!userID) {
-    return res.status(403).send("FAILURE");
+  //verify otp
+  const valid = await validateOTP(req.body.email, req.body.otp);
+  if (!valid) {
+    return res.status(401).json({ error: 'Invalid OTP' });
   }
 
-  //send updated hash to database
-  const updated = await updatePassword(userID, hash);
-  if (updated) {
-    //invalidate current sessions
-    //grab current sessions under their id
-    const sessions = await getSessions(userID)
-    if (sessions.length > 0) {
-      sessions.forEach((session) => {
-        invalidateSession(session)
-      })
-    }
-    return res.status(200).send("SUCCESS");
-  }
-  return res.status(403).send("FAILURE");
-  
+  //check if user exists, and get current session for device
+  const user = await sql`
+    SELECT * FROM USERS WHERE email = ${req.body.email}
+    JOIN sessions on users.uid = sessions.uid
+    WHERE email = ${req.body.email}
+  `;
+
+  const session = await createSession()
+
+  return res.status(200).send("SUCCESS");
 });
 
 /**
  * Sends the user a one time OTP that expires in 10 mins
  */
-app.post("/sendotp", async (req, res, next) => {
+app.post("/login/otp", async (req, res, next) => {
   const email = req.body.email
 
   //generate OTP
@@ -420,7 +291,7 @@ app.use((req, res, next) => {
 //error handling
 app.use(function (err, req, res, next) {
   console.error(err);
-  res.status(500).send({ error: 'Internal Server Error' });
+  return res.status(500).send({ error: 'Internal Server Error' });
 });
 
 module.exports.handler = serverless(app);
