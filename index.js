@@ -3,6 +3,8 @@ const serverless = require("serverless-http");
 const express = require("express");
 const app = express();
 const bodyParser = require('body-parser');
+const sql = require("./db");
+const emailregex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
 
 //handle posts
 app.use(bodyParser.json());
@@ -19,7 +21,7 @@ const users_table = "clipr-auth-users";
 const session_table = "clipr-auth-sessions";
 const dynamo = new DynamoDB({ region: REGION })
 
-//helper function to generate UUID's for users
+//helper function to generate session id's for users
 const generateId = (userId) => {
   const hashInput = `${Date.now()}${userId}${Math.floor(Math.random() * 100000)}`
   const generatedId = SHA256(hashInput, { outputLength: 32 }).toString()
@@ -31,7 +33,7 @@ const generateId = (userId) => {
  * @param {String} userID 
  * @returns session info or false
  */
-async function createSession(userID, type) {
+async function createSession(userID) {
   // Generate Session ID based on User ID
   const sessionID = generateId(userID)
   const currentTime = Date.now()
@@ -43,7 +45,7 @@ async function createSession(userID, type) {
     sessionStartTimestamp: currentTime, // Time the sesion was created
     isActive: true, // Whether the session is Active
     expires: currentTime + 1000 * 60 * 60 * 24 * 30, // Set expiry date of session to 30 days from now
-    type: type
+
   }
 
   //wait for dynamo to store and return the result
@@ -71,30 +73,20 @@ async function createSession(userID, type) {
  * @param {String} type
  * @returns BOOL indicating whether user was created or not
  */
-async function createUser(email, hash, userID, type) {
-  const user = {
-    userID: userID,
-    email: email,
-    passhash: hash,
-    type: type
-  }
-
+async function createUser(email) {
   var p = new Promise((resolve, reject) => {
-    dynamo.putItem({
-      TableName: users_table,
-      Item: marshall(user),
-      ConditionExpression: 'attribute_not_exists(email) AND attribute_not_exists(userID)'
-    }, function(err) {
-      if (err) {
-        console.log('CREATE USER ERROR:');
-        console.log(err);
-        resolve(false)
-      } else {
-        resolve(true)
-      }
+    sql`
+      INSERT INTO users ${sql({
+        stylist: false,
+        email: email,
+      })} RETURNING uid
+    `.then((user) => {
+      resolve(user[0]);
+    }).catch((err) => {
+      reject(err);
     });
   });
-  
+    
   return await p;
 }
 
@@ -340,22 +332,23 @@ app.get("/", (req, res, next) => {
  * Registers a new user
  */
 app.post("/register", async (req, res, next) => {
-  const email = req.body.email
-  const hash = req.body.passhash
-  const userID = uuidv4()
-  const type = req.body.type
-  console.log(type)
-  if (type != 'barber' && type != 'client') {
-    return res.status(403).send("ERROR");
-  }
-  const created = await createUser(email, hash, userID, type);
-  if (created) {
-    // ISSUING TOKEN ON SUCCESS
-    var session = await createSession(userID, type)
-    return res.status(200).send(session);
+  if (typeof(req.body.email) !== 'string' || !emailregex.test(req.body.email)) {
+    return res.status(400).json({ error: 'Invalid Email' });
   }
 
-  return res.status(403).send("USEREXISTS");
+  var user;
+  try {
+    user = await createUser(req.body.email)
+  } catch(err) {
+    console.error(err);
+    return res.status(500).json({ error: "CREATE USER FAILED" });
+  };
+
+  // CREATING SESSION
+  //const session = await createSession(user[0].uid)
+  return res.status(200).send('session');
+  
+
 });
 
 /**
