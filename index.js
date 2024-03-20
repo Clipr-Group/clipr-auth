@@ -33,62 +33,22 @@ const generateId = (userId) => {
  * @param {String} userID 
  * @returns session info or false
  */
-async function createSession(userID) {
+const generateSession = (userID) => {
   // Generate Session ID based on User ID
   const sessionID = generateId(userID)
   const currentTime = Date.now()
 
   // Item to store in the database
   const sessionInfo = {
-    sessionID: sessionID, // Primary Key
-    userID: userID,
-    sessionStartTimestamp: currentTime, // Time the sesion was created
-    isActive: true, // Whether the session is Active
-    expires: currentTime + 1000 * 60 * 60 * 24 * 30, // Set expiry date of session to 30 days from now
+    sid: sessionID, // Primary Key
+    uid: userID,
+    active: true,
+    last_active: currentTime
+  };
 
-  }
-
-  //wait for dynamo to store and return the result
-  var p = new Promise((resolve, reject) => {
-    dynamo.putItem({
-      TableName: session_table,
-      Item: marshall(sessionInfo), // The Item we want to add
-    }, function(err) {
-      if (err) {
-        resolve(false)
-      } else {
-        resolve(sessionInfo)
-      }
-    })
-  })
-  
-  return await p;
+  return sessionInfo;
 }
 
-/**
- * Creates a new user
- * @param {String} email 
- * @param {String} hash //password hash 
- * @param {String} userID 
- * @param {String} type
- * @returns BOOL indicating whether user was created or not
- */
-async function createUser(email) {
-  var p = new Promise((resolve, reject) => {
-    sql`
-      INSERT INTO users ${sql({
-        stylist: false,
-        email: email,
-      })} RETURNING uid
-    `.then((user) => {
-      resolve(user[0]);
-    }).catch((err) => {
-      reject(err);
-    });
-  });
-    
-  return await p;
-}
 
 /**
  * Updates the users password
@@ -332,23 +292,28 @@ app.get("/", (req, res, next) => {
  * Registers a new user
  */
 app.post("/register", async (req, res, next) => {
+  //body validation
   if (typeof(req.body.email) !== 'string' || !emailregex.test(req.body.email)) {
     return res.status(400).json({ error: 'Invalid Email' });
   }
 
-  var user;
-  try {
-    user = await createUser(req.body.email)
-  } catch(err) {
-    console.error(err);
-    return res.status(500).json({ error: "CREATE USER FAILED" });
-  };
+  //create a user
+  const user = await sql`
+    INSERT INTO users ${sql({
+      stylist: false,
+      email: req.body.email,
+    })} RETURNING uid
+  `.catch((err) => next(err));
 
-  // CREATING SESSION
-  //const session = await createSession(user[0].uid)
-  return res.status(200).send('session');
+  // generate session details
+  const sessionDetails = generateSession(user[0].uid);
+  // write to sessions table
+  const session = await sql`
+    INSERT INTO sessions ${sql(sessionDetails)}
+    RETURNING sid
+  `.catch((err) => next(err));
   
-
+  return res.status(200).send(session[0]);
 });
 
 /**
@@ -450,6 +415,12 @@ app.use((req, res, next) => {
   return res.status(404).json({
     error: "Not Found",
   });
+});
+
+//error handling
+app.use(function (err, req, res, next) {
+  console.error(err);
+  res.status(500).send({ error: 'Internal Server Error' });
 });
 
 module.exports.handler = serverless(app);
