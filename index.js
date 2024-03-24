@@ -35,11 +35,11 @@ async function createDevice(device_id, device_type) {
 }
 
 /**
- * Creates a new Session
+ * Creates session object
  * @param {String} userID 
  * @returns session info or false
  */
-const generateSessionDetails = (userID, device_id) => {
+const generateSessionDetails = (userID, user_agent) => {
   // Generate Session ID based on User ID
   const sessionID = generateId(userID)
   const currentTime = Date.now()
@@ -49,17 +49,22 @@ const generateSessionDetails = (userID, device_id) => {
     sid: sessionID, // Primary Key
     uid: userID,
     last_active: currentTime,
-    device_id: device_id
+    created_at: currentTime,
+    user_agent: user_agent
   };
 
   return sessionInfo;
 }
 
-async function createSession(userID, device_id, device_type) {
-  //create a device
-  const device = await createDevice(device_id, device_type);
+/**
+ * Creates a new session in db
+ * @param {String} userID 
+ * @param {String} user_agent 
+ * @returns session details
+ */
+async function createSession(userID, user_agent) {
   // generate session details
-  const sessionDetails = generateSessionDetails(userID, device_id);
+  const sessionDetails = generateSessionDetails(userID, user_agent);
   // write to sessions table
   return await sql`
     INSERT INTO sessions ${sql(sessionDetails)}
@@ -77,15 +82,31 @@ async function createUser(email) {
 }
 
 /**
- * Stores Password reset OTP in database
+ * creates and stores 6 digit OTP in database
  * @param {String} email 
- * @param {String} otp 
- * @returns Dyanamo Response
+ * @returns
  */
-async function storeOTP(email, otp) {
-  
-
+async function createOTP(email) {
+  //generate 6 digit OTP
+  var digits = '0123456789';
+  let otp = '';
+  for (let i = 0; i < 6; i++ ) {
+      otp += digits[Math.floor(Math.random() * 10)];
+  }
+  const expires = new Date(Date.now() + 15 * 60000) //otp expires in 15 mins
+  return await sql`
+    INSERT INTO otp (uid, code, expires)
+    VALUES (
+      (SELECT uid FROM users WHERE email = ${email}),
+      ${otp},
+      ${expires}
+    )
+    ON CONFLICT (uid)
+    DO UPDATE SET expires = ${expires}, code = ${otp}
+  `;
 }
+
+
 
 /**
  * Checks OTP validity to see if it matches whats in database and its not yet expired
@@ -242,15 +263,12 @@ app.post("/login/email", async (req, res, next) => {
 app.post("/login/otp", async (req, res, next) => {
   const email = req.body.email
 
-  //generate OTP
-  var digits = '0123456789';
-  let OTP = '';
-  for (let i = 0; i < 6; i++ ) {
-      OTP += digits[Math.floor(Math.random() * 10)];
+  var otp;
+  try{
+    otp = await createOTP(email);
+  } catch(err) {
+    return next(err);
   }
-  //put in database
-  console.log(OTP)
-  const stored = await storeOTP(email, OTP)
 
   //TODO email to user
  
@@ -258,29 +276,7 @@ app.post("/login/otp", async (req, res, next) => {
   return res.status(200).send("SUCCESS");
 });
 
-/**
- * Debug endpoint for development
- */
-app.get("/getToken", (req, res, next) => {
-  // SIGNING OPTIONS
-  var token = createToken("kooshpatel@gmail.com", 1)
-  return res.status(200).send(token);
-});
 
-/**
- * Verifies a token is legitimate
- */
-app.get("/verify", async (req, res, next) => {
-  const sessionID = req.headers.authorization.split(' ')[1]
-  const token = await verifyToken(sessionID)
-  if (token.isActive) {
-    return res.status(200).send({
-      isActive: token.isActive,
-      expires: token.expires,
-    });
-  }
-  return res.status(403).send("INVALIDTOKEN");
-});
 
 app.use((req, res, next) => {
   return res.status(404).json({
