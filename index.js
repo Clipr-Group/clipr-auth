@@ -3,14 +3,21 @@ const serverless = require("serverless-http");
 const express = require("express");
 const app = express();
 const bodyParser = require('body-parser');
+var useragent = require('express-useragent');
+
+//sql
 const sql = require("./db");
+//mailer
+const mailer = require("./mailer");
 const emailregex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
 
 //handle posts
 app.use(bodyParser.json());
+//get user agent details
+app.use(useragent.express());
 
 //token stuff
-const { SHA256 } = require("crypto-js")
+const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 
 
@@ -21,7 +28,7 @@ const { v4: uuidv4 } = require('uuid');
  */
 const generateId = (userId) => {
   const hashInput = `${Date.now()}${userId}${Math.floor(Math.random() * 100000)}`
-  const generatedId = SHA256(hashInput, { outputLength: 32 }).toString()
+  const generatedId = crypto.createHash('sha256').update(hashInput).digest('hex');
   return generatedId
 }
 
@@ -93,17 +100,20 @@ async function createOTP(email) {
   for (let i = 0; i < 6; i++ ) {
       otp += digits[Math.floor(Math.random() * 10)];
   }
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hashedOTP = crypto.pbkdf2Sync(otp, salt, 1000, 64, 'sha512').toString('hex');
   const expires = new Date(Date.now() + 15 * 60000) //otp expires in 15 mins
-  return await sql`
-    INSERT INTO otp (uid, code, expires)
-    VALUES (
-      (SELECT uid FROM users WHERE email = ${email}),
-      ${otp},
-      ${expires}
-    )
-    ON CONFLICT (uid)
-    DO UPDATE SET expires = ${expires}, code = ${otp}
+  await sql`
+    INSERT INTO otp ${sql({
+      email: email,
+      expires: expires,
+      hashed_otp: hashedOTP,
+      salt: salt
+    })}
+    ON CONFLICT (email)
+    DO UPDATE SET expires = ${expires}, hashed_otp = ${hashedOTP}, salt = ${salt}
   `;
+  return otp;
 }
 
 
@@ -117,11 +127,12 @@ async function createOTP(email) {
 async function validateOTP(email, otp) {
   var p = new Promise((resolve, reject) => {
     sql`
-      SELECT otp.code, otp.expires FROM users
-      JOIN otp on users.uid = otp.uid
-      WHERE users.email = ${email}
-    `.then((code) => {
-      if (code[0].code === otp && Date.now() < new Date(code[0].expires).getTime()) {
+      SELECT otp.hashed_otp, otp.salt, otp.expires FROM otp
+      WHERE email = ${email}
+    `.then((otprow) => {
+      const salt = otprow[0].salt;
+      const hashedOTP = crypto.pbkdf2Sync(otp, salt, 1000, 64, 'sha512').toString('hex');
+      if (otprow[0].hashed_otp === hashedOTP && Date.now() < new Date(otprow[0].expires).getTime()) {
         resolve(true);
       } else {
         resolve(false);
@@ -226,8 +237,6 @@ app.post("/register/email", async (req, res, next) => {
  * login method for email with otp
  * @param {String} email
  * @param {String} otp
- * @param {String} device_id
- * @param {String} device_type
  * @returns session id or error
  */
 app.post("/login/email", async (req, res, next) => {
@@ -258,19 +267,23 @@ app.post("/login/email", async (req, res, next) => {
 });
 
 /**
- * Sends the user a one time OTP that expires in 10 mins
+ * sends the user an otp that expires in 15 mins
+ * @param {String} email
+ * @returns {Response} status message
  */
 app.post("/login/otp", async (req, res, next) => {
   const email = req.body.email
-
+  const location = '';
   var otp;
+  var mail;
   try{
+    //create and save otp in db
     otp = await createOTP(email);
+    //email to user
+    mail = await mailer.sendOTPMail(email, otp, req.useragent.source, req.socket.remoteAddress);
   } catch(err) {
     return next(err);
   }
-
-  //TODO email to user
  
 
   return res.status(200).send("SUCCESS");
