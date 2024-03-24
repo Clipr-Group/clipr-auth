@@ -17,6 +17,8 @@ provider:
     PGDATABASE: ${self:custom.secrets.PGDATABASE}
     PGUSER: ${self:custom.secrets.PGUSER}
     PGPASSWORD: ${self:custom.secrets.PGPASSWORD}
+    MAILUSER: ${self:custom.secrets.MAILUSER}
+    MAILPASS: ${self:custom.secrets.MAILPASS}
 
 functions:
   api:
