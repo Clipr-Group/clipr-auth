@@ -177,8 +177,11 @@ async function verifySession(sessionID) {
  * @param {String} sessionID 
  * @returns Session Attributes
  */
-async function invalidateSession(sessionID) {
-  //set active to false
+async function removeSession(sessionID) {
+  return await sql`
+    DELETE FROM sessions
+    WHERE sid = ${sessionID}
+  `;
 }
 
 /**
@@ -200,7 +203,7 @@ app.get("/", (req, res, next) => {
 app.post("/login/email", async (req, res, next) => {
   //body validation
   if (typeof(req.body.email) !== 'string' || !emailregex.test(req.body.email)) {
-    return res.status(400).json({ error: 'Invalid Email' });
+    return res.status(400).send({ error: 'Invalid Email' });
   }
   if (typeof(req.body.otp) !== 'string' || req.body.otp.length !== 6) {
     return res.status(400).json({ error: 'Invalid OTP' });
@@ -268,6 +271,22 @@ app.post("/session/verify", async (req, res, next) => {
   }
   const session = req.body.session
   const valid = await verifySession(session);
+  return res.status(200).json({ 'valid': valid });
+});
+
+app.post("/logout", async (req, res, next) => {
+  //body validation
+  if (typeof(req.body.session !== 'string')) {
+    return res.status(400).json({ error: 'Invalid Session Token' });
+  }
+  const session = req.body.session
+  try{
+    const removed = await removeSession(session);
+  } catch (err) {
+    next(err);
+    return;
+  }
+  
   return res.status(200).json({ 'valid': valid });
 });
 
