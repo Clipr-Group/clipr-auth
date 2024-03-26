@@ -414,7 +414,7 @@ const mailer = {
           <td style="overflow-wrap:break-word;word-break:break-word;padding:10px;font-family:arial,helvetica,sans-serif;" align="left">
             
       <div style="font-size: 14px; line-height: 110%; text-align: center; word-wrap: break-word;">
-        <p style="line-height: 110%;">${new Date()}</p>
+        <p style="line-height: 110%;">${new Date().toLocaleString('en-US', { timeZoneName: 'short' })}</p>
       </div>
     
           </td>

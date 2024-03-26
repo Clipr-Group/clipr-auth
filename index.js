@@ -263,7 +263,7 @@ app.post("/login/email", async (req, res, next) => {
 
   const session = await createSession()
 
-  return res.status(200).send("SUCCESS");
+  return res.status(200).json({"message": "success"});
 });
 
 /**
@@ -286,7 +286,7 @@ app.post("/login/otp", async (req, res, next) => {
   }
  
 
-  return res.status(200).send("SUCCESS");
+  return res.status(200).json({"message": "success"});
 });
 
 
