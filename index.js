@@ -151,8 +151,10 @@ async function validateOTP(email, otp) {
  * @returns Array of sessionID's
  */
 async function getSessions(userID) {
-
-  
+  return await sql`
+    SELECT * FROM sessions
+    WHERE uid = ${userID}
+  `;
 }
 
 /**
@@ -160,33 +162,14 @@ async function getSessions(userID) {
  * @param {String} sessionID 
  * @returns updated session or nothing
  */
-async function verifyToken(sessionID) {
-  
-  var currentTime = Date.now()
-  //break if no token found
-  
-
-  
-
-  //expired token logic
-  
-      // invalidate session if session is active and it is expired
-      
-      
-      // return update session info
-      
-    
-    
-   
-  
-
-  //otherwise return session with new expiry date
-  const newExpires = currentTime + 1000 * 60 * 60 * 24 * 30 // 30 days from now
-  // extend session
-  
-
-  // return session info with new expiry date
- 
+async function verifySession(sessionID) {
+  const session = await sql`
+    UPDATE sessions
+    SET last_active = ${Date.now()}
+    WHERE sid = ${sessionID}
+    RETURNING sid
+  `;
+  return session.length > 0 ? true : false;
 }
 
 /**
@@ -207,34 +190,9 @@ app.get("/", (req, res, next) => {
   });
 });
 
-/**
- * Registers a new user
- * @param {String} email
- * @returns session id
- */
-app.post("/register/email", async (req, res, next) => {
-  //body validation
-  if (typeof(req.body.email) !== 'string' || !emailregex.test(req.body.email)) {
-    return res.status(400).json({ error: 'Invalid Email' });
-  }
-
-  var user;
-  var session;
-  try {
-    //create a user
-    user = await createUser(req.body.email);
-    //create a session
-    session = await createSession(user[0].uid, req.body.device_id, req.body.device_type);
-  } catch (err) {
-    next(err);
-    return;
-  }
-  
-  return res.status(200).send(session[0]);
-});
 
 /**
- * login method for email with otp
+ * login/signup method for email with otp
  * @param {String} email
  * @param {String} otp
  * @returns session id or error
@@ -249,21 +207,30 @@ app.post("/login/email", async (req, res, next) => {
   }
 
   //verify otp
-  const valid = await validateOTP(req.body.email, req.body.otp);
+  const valid = await validateOTP(req.body.email, req.body.otp).catch((err) => next(err));
   if (!valid) {
     return res.status(401).json({ error: 'Invalid OTP' });
   }
 
   //check if user exists, and get current session for device
   const user = await sql`
-    SELECT * FROM USERS WHERE email = ${req.body.email}
-    JOIN sessions on users.uid = sessions.uid
+    SELECT uid FROM USERS
     WHERE email = ${req.body.email}
   `;
+  var uid;
+  if (user.length > 1) { //multiple accounts, throw an error
+    return res.status(400).json({ error: 'Duplicate email detected' }); 
+  } else if (user.length === 1) { //user exists
+    uid = user[0].uid;
+  } else { //create a new user
+    const newUser = await createUser(req.body.email).catch((err)=>next(err));
+    uid = newUser[0].uid;
+  }
 
-  const session = await createSession()
+  //create session
+  session = await createSession(uid, req.useragent.source);
 
-  return res.status(200).json({"message": "success"});
+  return res.status(200).send(session);
 });
 
 /**
@@ -271,7 +238,12 @@ app.post("/login/email", async (req, res, next) => {
  * @param {String} email
  * @returns {Response} status message
  */
-app.post("/login/otp", async (req, res, next) => {
+app.post("/otp", async (req, res, next) => {
+  //body validation
+  if (typeof(req.body.email) !== 'string' || !emailregex.test(req.body.email)) {
+    return res.status(400).json({ error: 'Invalid Email' });
+  }
+
   const email = req.body.email
   const location = '';
   var otp;
@@ -287,6 +259,16 @@ app.post("/login/otp", async (req, res, next) => {
  
 
   return res.status(200).json({"message": "success"});
+});
+
+app.post("/session/verify", async (req, res, next) => {
+  //body validation
+  if (typeof(req.body.session !== 'string')) {
+    return res.status(400).json({ error: 'Invalid Session Token' });
+  }
+  const session = req.body.session
+  const valid = await verifySession(session);
+  return res.status(200).json({ 'valid': valid });
 });
 
 
