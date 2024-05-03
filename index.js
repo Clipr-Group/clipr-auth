@@ -77,6 +77,40 @@ async function createSession(userID, user_agent) {
   return accesstoken;
 }
 
+async function validateToken(req, res, next) {
+  if (typeof req.headers.authorization === 'undefined') {
+    res.status(403).json({ error: 'Token not found'});
+  }
+
+  const bearer = req.headers.authorization.split(' ');
+  const bearertoken = bearer[1];
+
+  try {
+    const verify = jwt.verify(bearertoken, secret);
+    req.token  = bearertoken;
+    next();
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      //verify again, but ignore expiry just to make sure its still valid even though its expired
+      try {
+        const token = jwt.verify(bearertoken, secret, { ignoreExpiration: true });
+        //check that the session exists in db
+        const refresh = await verifySession(token.sid);
+        if (refresh) {
+          //generate refreshed access token
+          req.token = generateToken(token.uid, token.sid);
+          next();
+        }
+      } catch (err2) {
+        return res.status(401).json({ error: err2.message });
+      }
+    } 
+    return res.status(401).json({ error: err.message });
+  }
+
+
+}
+
 async function createUser(email) {
   return await sql`
     INSERT INTO users ${sql({
