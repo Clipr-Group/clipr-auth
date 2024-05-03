@@ -179,6 +179,7 @@ async function removeSession(sessionID) {
   return await sql`
     DELETE FROM sessions
     WHERE sid = ${sessionID}
+    RETURNING sid
   `;
 }
 
@@ -316,20 +317,25 @@ app.post("/token/refresh", async (req, res, next) => {
   }
 });
 
-app.post("/logout", async (req, res, next) => {
+/**
+ * Revokes a session by deleting from db, session will expire after 5 mins
+ * @param {String} accessToken
+ */
+app.post("/token/revoke", async (req, res, next) => {
   //body validation
-  if (typeof(req.body.session !== 'string')) {
+  /*if (typeof(req.body.session !== 'string')) {
     return res.status(400).json({ error: 'Invalid Session Token' });
-  }
-  const session = req.body.session
+  }*/
+  
   try{
-    const removed = await removeSession(session);
+    const token = jwt.verify(req.body.accessToken, secret, { ignoreExpiration: true });
+    const removed = await removeSession(token.sid);
+    return res.status(200).json({ 'revoked': removed[0] });
   } catch (err) {
-    next(err);
+    next(err.message);
     return;
   }
   
-  return res.status(200).json({ 'valid': valid });
 });
 
 
