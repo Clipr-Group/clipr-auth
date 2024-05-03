@@ -39,21 +39,15 @@ async function createDevice(device_id, device_type) {
  * @param {String} userID 
  * @returns session info or false
  */
-const generateTokens = (userID, sessionID) => {
+const generateToken = (userID, sessionID) => {
   //auth token
-  const authpayload = {
-    id: userID
+  const payload = {
+    uid: userID,
+    sid: sessionID
   };
   const options = { expiresIn: 300 }; //5 min expiration
-  const auth = jwt.sign(authpayload, secret, options);
 
-  //refresh token
-  const refreshpayload = {
-    sid: sessionID
-  }
-  const refresh = jwt.sign(refreshpayload, secret);
-
-  return { auth: auth, refresh: refresh };
+  return jwt.sign(payload, secret, options);
 }
 
 /**
@@ -64,7 +58,7 @@ const generateTokens = (userID, sessionID) => {
  */
 async function createSession(userID, user_agent) {
   const sessionID = nanoid();
-  const tokens = generateTokens(userID, sessionID);
+  const accesstoken = generateToken(userID, sessionID);
   const currentTime = Date.now();
 
   // Item to store in the database
@@ -78,10 +72,9 @@ async function createSession(userID, user_agent) {
   // write to sessions table
   await sql`
     INSERT INTO sessions ${sql(sessionInfo)}
-    RETURNING sid
   `;
 
-  return tokens;
+  return accesstoken;
 }
 
 async function createUser(email) {
@@ -220,7 +213,7 @@ app.post("/login/email", async (req, res, next) => {
     return res.status(401).json({ error: 'Invalid OTP' });
   }
 
-  //check if user exists, and get current session for device
+  //check if user exists
   const user = await sql`
     SELECT uid FROM USERS
     WHERE email = ${req.body.email}
@@ -238,7 +231,7 @@ app.post("/login/email", async (req, res, next) => {
   //create session
   const session = await createSession(uid, req.useragent.source);
   
-  return res.status(200).json({ auth: session.auth, refresh: session.refresh });
+  return res.status(200).json({ accessToken: session });
 });
 
 /**
@@ -269,22 +262,46 @@ app.post("/otp", async (req, res, next) => {
   return res.status(200).json({"message": "success"});
 });
 
-app.post("/token/verify", async (req, res, next) => {
+/**
+ * validates a token, and refreshes if expired
+ * @param {String} accessToken (JWT)
+ */
+app.post("/token/validate", async (req, res, next) => {
   //body validation
-  /*if (typeof(req.body.auth !== 'string')) {
+  /*if (typeof(req.body.accessToken !== 'string')) {
     return res.status(400).json({ error: 'Invalid Session Token' });
   }*/
   //const valid = await verifySession(session);
 
   try {
-    const decoded = jwt.verify(req.body.auth, secret);
+    const verify = jwt.verify(req.body.accessToken, secret);
   } catch (err) {
-    return res.status(401).json({ error: err.message })
+    if (err.name === 'TokenExpiredError') {
+      //verify again, but ignore expiry just to make sure its still valid even though its expired
+      try {
+        const token = jwt.verify(req.body.accessToken, secret, { ignoreExpiration: true });
+        //check that the session exists in db
+        const refresh = await verifySession(token.sid);
+        if (refresh) {
+          //generate refreshed access token
+          const newToken = generateToken(token.uid, token.sid);
+          return res.status(200).json({ accessToken: newToken });
+        }
+      } catch (err2) {
+        return res.status(401).json({ error: err2.message });
+      }
+    } 
+    return res.status(401).json({ error: err.message });
   }
 
   return res.status(200).json({ valid: true });
 });
 
+/**
+ * Force refresh a token
+ * @param {String} accessToken (JWT)
+ * @returns {String} accessToken or error
+ */
 app.post("/token/refresh", async (req, res, next) => {
   //verifySession(token)
 });
