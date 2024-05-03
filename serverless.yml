@@ -19,6 +19,7 @@ provider:
     PGPASSWORD: ${self:custom.secrets.PGPASSWORD}
     MAILUSER: ${self:custom.secrets.MAILUSER}
     MAILPASS: ${self:custom.secrets.MAILPASS}
+    SECRETKEY: ${self:custom.secrets.SECRETKEY}
 
 functions:
   api:

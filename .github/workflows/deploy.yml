@@ -18,6 +18,11 @@ jobs:
       uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
+    - name: create secrets json
+      uses: jsdaniell/create-json@v1.2.3
+      with:
+        name: "secrets.json"
+        json: '{"NODE_ENV": ${{ secrets.NODE_ENV }}, "PGHOST": ${{ secrets.PGHOST }}, "PGPORT": ${{ secrets.PGPORT }}, "PGDATABASE": ${{ secrets.PGDATABASE }}, "PGUSER": ${{ secrets.PGUSER }}, "PGPASSWORD": ${{ secrets.PGPASSWORD }}, "MAILUSER": ${{ secrets.MAILUSER }}, "MAILPASS": ${{ secrets.MAILPASS }}, "SECRETKEY": ${{ secrets.SECRETKEY }}}'
     - run: npm ci
     - name: serverless deploy
       uses: serverless/github-action@v3.2
