@@ -303,7 +303,17 @@ app.post("/token/validate", async (req, res, next) => {
  * @returns {String} accessToken or error
  */
 app.post("/token/refresh", async (req, res, next) => {
-  //verifySession(token)
+  //validate token
+  try{
+    const token = jwt.verify(req.body.accessToken, secret, { ignoreExpiration: true });
+    const refresh = await verifySession(token.sid);
+    if (refresh) {
+      const newToken = generateToken(token.uid, token.sid);
+      return res.status(200).json({ accessToken: newToken });
+    }
+  } catch (err) {
+    return res.status(401).json({ error: err.message });
+  }
 });
 
 app.post("/logout", async (req, res, next) => {
