@@ -8,12 +8,13 @@
     "express": "^4.18.2",
     "express-useragent": "^1.0.15",
     "fs": "^0.0.1-security",
+    "jsonwebtoken": "^9.0.2",
+    "nanoid": "^3.3.7",
     "nodemailer": "^6.9.13",
     "offline": "^0.0.1",
     "postgres": "^3.4.3",
     "serverless": "^3.27.0",
-    "serverless-http": "^3.1.1",
-    "uuid": "^9.0.0"
+    "serverless-http": "^3.1.1"
   },
   "devDependencies": {
     "serverless-offline": "^12.0.4"
