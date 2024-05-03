@@ -1,9 +1,11 @@
+// index.js
+
 //serverless & express stuff
 const serverless = require("serverless-http");
 const express = require("express");
 const app = express();
 const bodyParser = require('body-parser');
-var useragent = require('express-useragent');
+const useragent = require('express-useragent');
 
 //sql
 const sql = require("./db");
@@ -18,19 +20,10 @@ app.use(useragent.express());
 
 //token stuff
 const crypto = require('crypto');
-const { v4: uuidv4 } = require('uuid');
-
-
-/**
- * 
- * @param {String} userId 
- * @returns {String} random id
- */
-const generateId = (userId) => {
-  const hashInput = `${Date.now()}${userId}${Math.floor(Math.random() * 100000)}`
-  const generatedId = crypto.createHash('sha256').update(hashInput).digest('hex');
-  return generatedId
-}
+const jwt = require('jsonwebtoken');
+const { nanoid } = require('nanoid');
+//CHANGEME
+const secret = 'super-secret-key';
 
 async function createDevice(device_id, device_type) {
   return await sql`
@@ -46,21 +39,21 @@ async function createDevice(device_id, device_type) {
  * @param {String} userID 
  * @returns session info or false
  */
-const generateSessionDetails = (userID, user_agent) => {
-  // Generate Session ID based on User ID
-  const sessionID = generateId(userID)
-  const currentTime = Date.now()
-
-  // Item to store in the database
-  const sessionInfo = {
-    sid: sessionID, // Primary Key
-    uid: userID,
-    last_active: currentTime,
-    created_at: currentTime,
-    user_agent: user_agent
+const generateTokens = (userID, sessionID) => {
+  //auth token
+  const authpayload = {
+    id: userID
   };
+  const options = { expiresIn: 300 }; //5 min expiration
+  const auth = jwt.sign(authpayload, secret, options);
 
-  return sessionInfo;
+  //refresh token
+  const refreshpayload = {
+    sid: sessionID
+  }
+  const refresh = jwt.sign(refreshpayload, secret);
+
+  return { auth: auth, refresh: refresh };
 }
 
 /**
@@ -70,13 +63,25 @@ const generateSessionDetails = (userID, user_agent) => {
  * @returns session details
  */
 async function createSession(userID, user_agent) {
-  // generate session details
-  const sessionDetails = generateSessionDetails(userID, user_agent);
+  const sessionID = nanoid();
+  const tokens = generateTokens(userID, sessionID);
+  const currentTime = Date.now();
+
+  // Item to store in the database
+  const sessionInfo = {
+    sid: sessionID, // Primary Key
+    uid: userID,
+    last_active: currentTime,
+    created_at: currentTime,
+    user_agent: user_agent
+  };
   // write to sessions table
-  return await sql`
-    INSERT INTO sessions ${sql(sessionDetails)}
+  await sql`
+    INSERT INTO sessions ${sql(sessionInfo)}
     RETURNING sid
   `;
+
+  return tokens;
 }
 
 async function createUser(email) {
@@ -220,7 +225,7 @@ app.post("/login/email", async (req, res, next) => {
     SELECT uid FROM USERS
     WHERE email = ${req.body.email}
   `;
-  var uid;
+  let uid;
   if (user.length > 1) { //multiple accounts, throw an error
     return res.status(400).json({ error: 'Duplicate email detected' }); 
   } else if (user.length === 1) { //user exists
@@ -231,9 +236,9 @@ app.post("/login/email", async (req, res, next) => {
   }
 
   //create session
-  session = await createSession(uid, req.useragent.source);
-
-  return res.status(200).send(session);
+  const session = await createSession(uid, req.useragent.source);
+  
+  return res.status(200).json({ auth: session.auth, refresh: session.refresh });
 });
 
 /**
@@ -264,14 +269,24 @@ app.post("/otp", async (req, res, next) => {
   return res.status(200).json({"message": "success"});
 });
 
-app.post("/session/verify", async (req, res, next) => {
+app.post("/token/verify", async (req, res, next) => {
   //body validation
-  if (typeof(req.body.session !== 'string')) {
+  /*if (typeof(req.body.auth !== 'string')) {
     return res.status(400).json({ error: 'Invalid Session Token' });
+  }*/
+  //const valid = await verifySession(session);
+
+  try {
+    const decoded = jwt.verify(req.body.auth, secret);
+  } catch (err) {
+    return res.status(401).json({ error: err.message })
   }
-  const session = req.body.session
-  const valid = await verifySession(session);
-  return res.status(200).json({ 'valid': valid });
+
+  return res.status(200).json({ valid: true });
+});
+
+app.post("/token/refresh", async (req, res, next) => {
+  //verifySession(token)
 });
 
 app.post("/logout", async (req, res, next) => {
