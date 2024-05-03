@@ -22,8 +22,8 @@ app.use(useragent.express());
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { nanoid } = require('nanoid');
-//CHANGEME
-const secret = 'super-secret-key';
+//jwt signing key
+const secret = process.env.SECRETKEY;
 
 async function createDevice(device_id, device_type) {
   return await sql`
@@ -337,8 +337,6 @@ app.post("/token/revoke", async (req, res, next) => {
   }
   
 });
-
-
 
 app.use((req, res, next) => {
   return res.status(404).json({
