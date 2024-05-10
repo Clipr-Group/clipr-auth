@@ -20,6 +20,11 @@ provider:
     MAILUSER: ${self:custom.secrets.MAILUSER}
     MAILPASS: ${self:custom.secrets.MAILPASS}
     SECRETKEY: ${self:custom.secrets.SECRETKEY}
+    LOGHOST: ${self:custom.secrets.LOGHOST}
+    LOGPORT: ${self:custom.secrets.LOGPORT}
+    LOGDATABASE: ${self:custom.secrets.LOGDATABASE}
+    LOGUSER: ${self:custom.secrets.LOGUSER}
+    LOGPASSWORD: ${self:custom.secrets.LOGPASSWORD}
 
 functions:
   api:
