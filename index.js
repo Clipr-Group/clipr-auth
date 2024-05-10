@@ -3,9 +3,11 @@
 //serverless & express stuff
 const serverless = require("serverless-http");
 const express = require("express");
+const errsole = require('errsole');
 
 //error logging
 errsole.initialize({
+  enableDashboard: false,
   storage: new ErrsoleSequelize({
       dialect: 'mysql',
       host: process.env.LOGHOST,
