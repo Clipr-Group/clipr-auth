@@ -42,11 +42,17 @@ async function createDevice(device_id, device_type) {
  * @param {String} userID 
  * @returns session info or false
  */
-const generateToken = (userID, sessionID) => {
+const generateToken = async (userID, sessionID) => {
+  const metadata = await sql`
+    SELECT metadata from auth2.users
+    WHERE uid = ${userID}
+  `;
+
   //auth token
   const payload = {
     uid: userID,
-    sid: sessionID
+    sid: sessionID,
+    metadata: metadata[0]
   };
   const options = { expiresIn: 300 }; //5 min expiration
 
