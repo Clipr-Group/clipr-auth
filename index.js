@@ -349,6 +349,7 @@ app.post("/token/refresh", async (req, res, next) => {
       const newToken = generateToken(token.uid, token.sid);
       return res.status(200).json({ access_token: newToken });
     }
+    return res.status(401).json({ error: 'Invalid Token' });
   } catch (err) {
     return res.status(401).json({ error: err.message });
   }
