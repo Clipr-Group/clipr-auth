@@ -30,7 +30,7 @@ const secret = process.env.SECRETKEY;
 
 async function createDevice(device_id, device_type) {
   return await sql`
-    INSERT INTO devices ${sql({
+    INSERT INTO auth2.devices ${sql({
       device_id: device_id,
       device_type: device_type
     })} ON CONFLICT (device_id) DO NOTHING
@@ -74,7 +74,7 @@ async function createSession(userID, user_agent) {
   };
   // write to sessions table
   await sql`
-    INSERT INTO sessions ${sql(sessionInfo)}
+    INSERT INTO auth2.sessions ${sql(sessionInfo)}
   `;
 
   return access_token;
@@ -116,8 +116,7 @@ async function validateToken(req, res, next) {
 
 async function createUser(email) {
   return await sql`
-    INSERT INTO users ${sql({
-      stylist: false,
+    INSERT INTO auth2.users ${sql({
       email: email,
     })} RETURNING uid
   `;
@@ -139,7 +138,7 @@ async function createOTP(email) {
   const hashedOTP = crypto.pbkdf2Sync(otp, salt, 1000, 64, 'sha512').toString('hex');
   const expires = new Date(Date.now() + 15 * 60000) //otp expires in 15 mins
   await sql`
-    INSERT INTO otp ${sql({
+    INSERT INTO auth2.otp ${sql({
       email: email,
       expires: expires,
       hashed_otp: hashedOTP,
@@ -162,7 +161,7 @@ async function createOTP(email) {
 async function validateOTP(email, otp) {
   var p = new Promise((resolve, reject) => {
     sql`
-      SELECT otp.hashed_otp, otp.salt, otp.expires FROM otp
+      SELECT otp.hashed_otp, otp.salt, otp.expires FROM auth2.otp
       WHERE email = ${email}
     `.then((otprow) => {
       const salt = otprow[0].salt;
@@ -187,7 +186,7 @@ async function validateOTP(email, otp) {
  */
 async function getSessions(userID) {
   return await sql`
-    SELECT * FROM sessions
+    SELECT * FROM auth2.sessions
     WHERE uid = ${userID}
   `;
 }
@@ -199,7 +198,7 @@ async function getSessions(userID) {
  */
 async function verifySession(sessionID) {
   const session = await sql`
-    UPDATE sessions
+    UPDATE auth2.sessions
     SET last_active = ${Date.now()}
     WHERE sid = ${sessionID}
     RETURNING sid
@@ -214,7 +213,7 @@ async function verifySession(sessionID) {
  */
 async function removeSession(sessionID) {
   return await sql`
-    DELETE FROM sessions
+    DELETE FROM auth2.sessions
     WHERE sid = ${sessionID}
     RETURNING sid
   `;
@@ -253,7 +252,7 @@ app.post("/login/email", async (req, res, next) => {
 
   //check if user exists
   const user = await sql`
-    SELECT uid FROM USERS
+    SELECT uid FROM auth2.users
     WHERE email = ${req.body.email}
   `;
   let uid;
