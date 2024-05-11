@@ -4,6 +4,7 @@
 const serverless = require("serverless-http");
 const express = require("express");
 const errsole = require('errsole');
+const ErrsoleSequelize = require('errsole-sequelize');
 
 //error logging
 errsole.initialize({
@@ -76,7 +77,7 @@ const generateToken = (userID, sessionID) => {
  */
 async function createSession(userID, user_agent) {
   const sessionID = nanoid();
-  const accesstoken = generateToken(userID, sessionID);
+  const access_token = generateToken(userID, sessionID);
   const currentTime = Date.now();
 
   // Item to store in the database
@@ -92,7 +93,7 @@ async function createSession(userID, user_agent) {
     INSERT INTO sessions ${sql(sessionInfo)}
   `;
 
-  return accesstoken;
+  return access_token;
 }
 
 async function validateToken(req, res, next) {
@@ -284,7 +285,7 @@ app.post("/login/email", async (req, res, next) => {
   //create session
   const session = await createSession(uid, req.useragent.source);
   
-  return res.status(200).json({ accessToken: session });
+  return res.status(200).json({ access_token: session });
 });
 
 /**
@@ -317,28 +318,28 @@ app.post("/otp", async (req, res, next) => {
 
 /**
  * validates a token, and refreshes if expired
- * @param {String} accessToken (JWT)
+ * @param {String} access_token (JWT)
  */
 app.post("/token/validate", async (req, res, next) => {
   //body validation
-  /*if (typeof(req.body.accessToken !== 'string')) {
+  /*if (typeof(req.body.access_token !== 'string')) {
     return res.status(400).json({ error: 'Invalid Session Token' });
   }*/
   //const valid = await verifySession(session);
 
   try {
-    const verify = jwt.verify(req.body.accessToken, secret);
+    const verify = jwt.verify(req.body.access_token, secret);
   } catch (err) {
     if (err.name === 'TokenExpiredError') {
       //verify again, but ignore expiry just to make sure its still valid even though its expired
       try {
-        const token = jwt.verify(req.body.accessToken, secret, { ignoreExpiration: true });
+        const token = jwt.verify(req.body.access_token, secret, { ignoreExpiration: true });
         //check that the session exists in db
         const refresh = await verifySession(token.sid);
         if (refresh) {
           //generate refreshed access token
           const newToken = generateToken(token.uid, token.sid);
-          return res.status(200).json({ accessToken: newToken });
+          return res.status(200).json({ access_token: newToken });
         }
       } catch (err2) {
         return res.status(401).json({ error: err2.message });
@@ -352,17 +353,17 @@ app.post("/token/validate", async (req, res, next) => {
 
 /**
  * Force refresh a token
- * @param {String} accessToken (JWT)
- * @returns {String} accessToken or error
+ * @param {String} access_token (JWT)
+ * @returns {String} access_token or error
  */
 app.post("/token/refresh", async (req, res, next) => {
   //validate token
   try{
-    const token = jwt.verify(req.body.accessToken, secret, { ignoreExpiration: true });
+    const token = jwt.verify(req.body.access_token, secret, { ignoreExpiration: true });
     const refresh = await verifySession(token.sid);
     if (refresh) {
       const newToken = generateToken(token.uid, token.sid);
-      return res.status(200).json({ accessToken: newToken });
+      return res.status(200).json({ access_token: newToken });
     }
   } catch (err) {
     return res.status(401).json({ error: err.message });
@@ -371,7 +372,7 @@ app.post("/token/refresh", async (req, res, next) => {
 
 /**
  * Revokes a session by deleting from db, session will expire after 5 mins
- * @param {String} accessToken
+ * @param {String} access_token
  */
 app.post("/token/revoke", async (req, res, next) => {
   //body validation
@@ -380,7 +381,7 @@ app.post("/token/revoke", async (req, res, next) => {
   }*/
   
   try{
-    const token = jwt.verify(req.body.accessToken, secret, { ignoreExpiration: true });
+    const token = jwt.verify(req.body.access_token, secret, { ignoreExpiration: true });
     const removed = await removeSession(token.sid);
     return res.status(200).json({ 'revoked': removed[0] });
   } catch (err) {

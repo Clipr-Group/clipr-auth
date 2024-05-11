@@ -3,6 +3,10 @@ frameworkVersion: '3'
 
 custom:
   secrets: ${file(secrets.json)}
+  serverless-offline:
+    httpPort: 4000
+    lambdaPort: 4002
+    websocketPort: 4001
 
 provider:
   name: aws
