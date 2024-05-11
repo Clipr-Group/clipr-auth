@@ -3,22 +3,6 @@
 //serverless & express stuff
 const serverless = require("serverless-http");
 const express = require("express");
-const errsole = require('errsole');
-const ErrsoleSequelize = require('errsole-sequelize');
-
-//error logging
-errsole.initialize({
-  enableDashboard: false,
-  storage: new ErrsoleSequelize({
-      dialect: 'mysql',
-      host: process.env.LOGHOST,
-      username: process.env.LOGUSER,
-      password: process.env.LOGPASSWORD,
-      database: process.env.LOGDATABASE,
-      port: Number(process.env.LOGPORT)
-  }),
-  port: 8003
-});
 
 const app = express();
 const bodyParser = require('body-parser');
