@@ -52,7 +52,7 @@ const generateToken = async (userID, sessionID) => {
   const payload = {
     uid: userID,
     sid: sessionID,
-    metadata: metadata[0]
+    metadata: metadata[0].metadata
   };
   const options = { expiresIn: 300 }; //5 min expiration
 
@@ -346,12 +346,14 @@ app.post("/token/validate", async (req, res, next) => {
  * @returns {String} access_token or error
  */
 app.post("/token/refresh", async (req, res, next) => {
+  const bearer = req.headers.authorization.split(' ');
+  const bearertoken = bearer[1];
   //validate token
   try{
-    const token = jwt.verify(req.body.access_token, secret, { ignoreExpiration: true });
+    const token = jwt.verify(bearertoken, secret, { ignoreExpiration: true });
     const refresh = await verifySession(token.sid);
     if (refresh) {
-      const newToken = generateToken(token.uid, token.sid);
+      const newToken = await generateToken(token.uid, token.sid);
       return res.status(200).json({ access_token: newToken });
     }
     return res.status(401).json({ error: 'Invalid Token' });
