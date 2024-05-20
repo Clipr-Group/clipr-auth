@@ -18,5 +18,8 @@
   },
   "devDependencies": {
     "serverless-offline": "^12.0.4"
+  },
+  "scripts": {
+    "dev": "tunnelto --subdomain clipr-auth --port 4000 & serverless offline start"
   }
 }
