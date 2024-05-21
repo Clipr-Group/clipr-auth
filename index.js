@@ -371,11 +371,13 @@ app.post("/token/revoke", async (req, res, next) => {
   /*if (typeof(req.body.session !== 'string')) {
     return res.status(400).json({ error: 'Invalid Session Token' });
   }*/
+  const bearer = req.headers.authorization.split(' ');
+  const bearertoken = bearer[1];
   
   try{
-    const token = jwt.verify(req.body.access_token, secret, { ignoreExpiration: true });
+    const token = jwt.verify(bearertoken, secret, { ignoreExpiration: true });
     const removed = await removeSession(token.sid);
-    return res.status(200).json({ 'revoked': removed[0] });
+    return res.status(200).json({ 'revoked': removed[0].sid });
   } catch (err) {
     next(err.message);
     return;
