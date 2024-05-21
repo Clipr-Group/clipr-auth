@@ -132,45 +132,10 @@ components:
           schema:
             '$ref': '#/components/schemas/Error'
   schemas:
-    User:
-      type: object
-      required:
-        - id
-        - name
-        - email
-      properties:
-        id:
-          type: integer
-          format: int64
-          examples:
-            - 1
-        name:
-          type: string
-          examples:
-            - Marc
-        email:
-          type: string
-          format: email
-          examples:
-            - marc@scalar.com
-    Credentials:
-      type: object
-      required:
-        - email
-        - otp
-      properties:
-        email:
-          type: string
-          format: email
-          examples:
-            - test@test.net
-        otp:
-          type: string
-          format: number
-          examples:
-            - 123456
     Email:
       type: object
+      required:
+        - email
       description: email payload
       properties:
         email:
@@ -179,6 +144,9 @@ components:
             - test@test.net
     EmailOTP:
       type: object
+      required:
+        - email
+        - otp
       description: email+otp payload
       properties:
         email:
