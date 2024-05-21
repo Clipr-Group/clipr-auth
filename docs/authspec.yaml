@@ -1,0 +1,230 @@
+openapi: 3.1.0
+info:
+  title: Clipr Auth
+  description: |
+    Clipr Auth OpenAPI specification
+
+    ## Resources
+
+    * https://github.com/Clipr-Group/clipr-auth
+    * https://github.com/OAI/OpenAPI-Specification
+
+  version: 1.0.0
+  contact:
+    name: Kush from Clipr
+    url: https://clipr.app
+    email: kush@clipr.app
+servers:
+  - url: https://auth.clipr.app
+security:
+  - bearerAuth: []
+tags:
+  - name: Authentication
+    description:
+      These endpoints are for various authentication based functions
+paths:
+  '/otp':
+    post:
+      tags:
+        - Authentication
+      summary: Send a one-time passcode
+      description: Can be used for new or existing accounts
+      operationId: otp
+      security:
+        - {}
+      requestBody:
+        content:
+          application/json:
+            schema:
+              '$ref': '#/components/schemas/Email'
+      responses:
+        '200':
+          description: Sent Successfully
+          content:
+            application/json:
+              schema:
+                '$ref': '#/components/schemas/Success'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                '$ref': '#/components/schemas/Error'
+  '/login/email':
+    post:
+      tags:
+        - Authentication
+      summary: Log in with email + otp
+      description: Used after OTP is sent.
+      operationId: login/email
+      security:
+        - {}
+      requestBody:
+        content:
+          application/json:
+            schema:
+              '$ref': '#/components/schemas/EmailOTP'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                ref: '#/components/schemas/TokenResponse'
+
+  '/token/refresh':
+    post:
+      tags:
+        - Authentication
+      summary: Refresh a token
+      description: Used when JWT is expired
+      operationId: token/refresh
+      security:
+        - {bearerAuth}
+      requestBody:
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                ref: '#/components/schemas/TokenResponse'
+  '/token/revoke':
+    post:
+      tags:
+        - Authentication
+      summary: Revoke a token
+      description: Used to logout/clear a session
+      operationId: token/revoke
+      security:
+        - {bearerAuth}
+      requestBody:
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                ref: '#/components/schemas/RevokedResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  responses:
+    BadRequest:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            '$ref': '#/components/schemas/Error'
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            '$ref': '#/components/schemas/Error'
+    NotFound:
+      description: NotFound
+      content:
+        application/json:
+          schema:
+            '$ref': '#/components/schemas/Error'
+  schemas:
+    User:
+      type: object
+      required:
+        - id
+        - name
+        - email
+      properties:
+        id:
+          type: integer
+          format: int64
+          examples:
+            - 1
+        name:
+          type: string
+          examples:
+            - Marc
+        email:
+          type: string
+          format: email
+          examples:
+            - marc@scalar.com
+    Credentials:
+      type: object
+      required:
+        - email
+        - otp
+      properties:
+        email:
+          type: string
+          format: email
+          examples:
+            - test@test.net
+        otp:
+          type: string
+          format: number
+          examples:
+            - 123456
+    Email:
+      type: object
+      description: email payload
+      properties:
+        email:
+          type: string
+          examples:
+            - test@test.net
+    EmailOTP:
+      type: object
+      description: email+otp payload
+      properties:
+        email:
+          type: string
+          examples:
+            - test@test.net
+        otp:
+          type: string
+          examples:
+            - '123456'
+    TokenResponse:
+      type: object
+      description: Access Token Response
+      properties:
+        access_token:
+          type: string
+          examples:
+            - eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+    RevokedResponse:
+      type: object
+      description: Revoked Response
+      properties:
+        revoked:
+          type: string
+          examples:
+            - a2w0QIbDGehi7F8LQwH_n
+    Token:
+      type: object
+      properties:
+        token:
+          type: string
+          examples:
+            - eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+    Success:
+      type: object
+      description: Success Response
+      properties:
+        message:
+          type: string
+          examples:
+            - success
+    Error:
+      type: object
+      description: Error Response
+      properties:
+        error:
+          type: string
+          examples:
+            - Invalid Email
