@@ -7,6 +7,7 @@ const express = require("express");
 const app = express();
 const bodyParser = require('body-parser');
 const useragent = require('express-useragent');
+const { validate, ValidationError, Joi } = require('express-validation');
 
 //sql
 const sql = require("./db");
@@ -28,6 +29,13 @@ const { nanoid } = require('nanoid');
 //jwt signing key
 const secret = process.env.SECRETKEY;
 
+
+
+/*
+-----------------------------------------------------------------------
+------------------------------ FUNCTIONS ------------------------------
+-----------------------------------------------------------------------
+*/
 async function createDevice(device_id, device_type) {
   return await sql`
     INSERT INTO auth2.devices ${sql({
@@ -225,8 +233,16 @@ async function removeSession(sessionID) {
   `;
 }
 
+
+/*
+-----------------------------------------------------------------------
+------------------------------ ENDPOINTS ------------------------------
+-----------------------------------------------------------------------
+*/
+
 /**
  * Base Path
+ * CHANGEME Remove for prod
  */
 app.get("/", (req, res, next) => {
   return res.status(200).json({
@@ -235,13 +251,19 @@ app.get("/", (req, res, next) => {
 });
 
 
+
 /**
  * login/signup method for email with otp
  * @param {String} email
  * @param {String} otp
  * @returns session id or error
  */
-app.post("/login/email", async (req, res, next) => {
+app.post("/login/email", validate({
+  body: Joi.object({
+    email: Joi.string().email().required(),
+    otp: Joi.string().length(6).required()
+  })
+}), async (req, res, next) => {
   //body validation
   if (typeof(req.body.email) !== 'string' || !emailregex.test(req.body.email)) {
     return res.status(400).send({ error: 'Invalid Email' });
@@ -282,7 +304,11 @@ app.post("/login/email", async (req, res, next) => {
  * @param {String} email
  * @returns {Response} status message
  */
-app.post("/otp", async (req, res, next) => {
+app.post("/otp", validate({
+  body: Joi.object({
+    email: Joi.string().email().required()
+  })
+}), async (req, res, next) => {
   //body validation
   if (typeof(req.body.email) !== 'string' || !emailregex.test(req.body.email)) {
     return res.status(400).json({ error: 'Invalid Email' });
@@ -306,10 +332,48 @@ app.post("/otp", async (req, res, next) => {
 });
 
 /**
+ * updates a users metadata
+ * @param {String} access_token (JWT)
+ * @param {Object} metadata
+ */
+app.post("/metadata", validate({
+  body: Joi.object({
+    access_token: Joi.string().required(),
+    metadata: Joi.object({
+      role: Joi.string().required()
+    }).required()
+  }),
+}), async (req, res, next) => {
+  //body validation
+  /*if (typeof(req.body.access_token !== 'string')) {
+    return res.status(400).json({ error: 'Invalid Session Token' });
+  }*/
+
+  try {
+    if (!req.body.metadata.role) { //required metadata field
+      throw Error('Missing required "role" attribute in metadata');
+    }
+    const verify = jwt.verify(req.body.access_token, secret);
+    await sql`
+      UPDATE auth2.users
+      SET metadata = ${req.body.metadata}
+      WHERE uid = ${verify.uid}
+    `;
+
+  } catch (err) {
+    return res.status(401).json({ error: err.message });
+  }
+});
+
+/**
  * validates a token, and refreshes if expired
  * @param {String} access_token (JWT)
  */
-app.post("/token/validate", async (req, res, next) => {
+app.post("/token/validate", validate({
+  body: Joi.object({
+    access_token: Joi.string().required()
+  })
+}), async (req, res, next) => {
   //body validation
   /*if (typeof(req.body.access_token !== 'string')) {
     return res.status(400).json({ error: 'Invalid Session Token' });
@@ -345,9 +409,15 @@ app.post("/token/validate", async (req, res, next) => {
  * @param {String} access_token (JWT)
  * @returns {String} access_token or error
  */
-app.post("/token/refresh", async (req, res, next) => {
-  const bearer = req.headers.authorization.split(' ');
-  const bearertoken = bearer[1];
+app.post("/token/refresh", validate({
+  body: Joi.object({
+    access_token: Joi.string().required()
+  })
+}), async (req, res, next) => {
+  //const bearer = req.headers.authorization.split(' ');
+  //const bearertoken = bearer[1];
+  const bearertoken = req.body.access_token;
+  
   //validate token
   try{
     const token = jwt.verify(bearertoken, secret, { ignoreExpiration: true });
@@ -366,7 +436,11 @@ app.post("/token/refresh", async (req, res, next) => {
  * Revokes a session by deleting from db, session will expire after 5 mins
  * @param {String} access_token
  */
-app.post("/token/revoke", async (req, res, next) => {
+app.post("/token/revoke", validate({
+  body: Joi.object({
+    access_token: Joi.string().required()
+  })
+}), async (req, res, next) => {
   //body validation
   /*if (typeof(req.body.session !== 'string')) {
     return res.status(400).json({ error: 'Invalid Session Token' });
@@ -393,8 +467,11 @@ app.use((req, res, next) => {
 
 //error handling
 app.use(function (err, req, res, next) {
-  console.error(err);
-  return res.status(500).send({ error: 'Internal Server Error' });
+  if (err instanceof ValidationError) {
+    return res.status(err.statusCode).json(err);
+  }
+  console.error(err)
+  return res.status(500).json({ error: 'Internal Server Error' });
 });
 
 module.exports.handler = serverless(app);
