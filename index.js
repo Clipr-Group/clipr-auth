@@ -473,7 +473,6 @@ app.use(function (err, req, res, next) {
   return res.status(500).json({ error: 'Internal Server Error' });
 });
 
-//module.exports.handler = serverless(app);
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`Clipr-Auth started on port ${PORT}`);
