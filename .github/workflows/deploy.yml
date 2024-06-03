@@ -24,12 +24,12 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         build-args: |
-          NODE_ENV: ${{ secrets.NODE_ENV }}
-          PGHOST: ${{ secrets.PGHOST }}
-          PGPORT: ${{ secrets.PGPORT }}
-          PGDATABASE: ${{ secrets.PGDATABASE }}
-          PGUSER: ${{ secrets.PGUSER }}
-          PGPASSWORD: ${{ secrets.PGPASSWORD }}
-          MAILUSER: ${{ secrets.MAILUSER }}
-          MAILPASS: ${{ secrets.MAILPASS }}
-          SECRETKEY: ${{ secrets.SECRETKEY }}
+          NODE_ENV: "${{ secrets.NODE_ENV }}"
+          PGHOST: "${{ secrets.PGHOST }}"
+          PGPORT: "${{ secrets.PGPORT }}"
+          PGDATABASE: "${{ secrets.PGDATABASE }}"
+          PGUSER: "${{ secrets.PGUSER }}"
+          PGPASSWORD: "${{ secrets.PGPASSWORD }}"
+          MAILUSER: "${{ secrets.MAILUSER }}"
+          MAILPASS: "${{ secrets.MAILPASS }}"
+          SECRETKEY: "${{ secrets.SECRETKEY }}"
