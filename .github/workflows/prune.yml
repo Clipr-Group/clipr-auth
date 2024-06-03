@@ -15,8 +15,8 @@ jobs:
       - uses: bots-house/ghcr-delete-image-action@v1.1.0
         with:
           # NOTE: at now only orgs is supported
-          owner: bots-house
-          name: some-web-service
+          owner: Clipr-Group
+          name: clipr-auth
           # NOTE: using Personal Access Token
           token: ${{ secrets.GITHUB_TOKEN }}
           # Keep latest N untagged images
