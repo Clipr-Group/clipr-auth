@@ -21,6 +21,8 @@
     "serverless-offline": "^12.0.4"
   },
   "scripts": {
-    "dev": "tunnelto --subdomain clipr-auth --port 4000 & serverless offline start"
+    "dev": "tunnelto --subdomain clipr-auth --port 4000 & node --watch -- --env-file .env index.js",
+    "devcontainer": "node --watch -- --env-file .env index.js",
+    "prod": "node index.js"
   }
 }

@@ -16,7 +16,6 @@ const mailer = require("./mailer");
 const emailregex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
 
 
-
 //handle posts
 app.use(bodyParser.json());
 //get user agent details
@@ -474,4 +473,8 @@ app.use(function (err, req, res, next) {
   return res.status(500).json({ error: 'Internal Server Error' });
 });
 
-module.exports.handler = serverless(app);
+//module.exports.handler = serverless(app);
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => {
+  console.log(`Clipr-Auth started on port ${PORT}`);
+});
