@@ -33,3 +33,8 @@ jobs:
           MAILUSER: "${{ secrets.MAILUSER }}"
           MAILPASS: "${{ secrets.MAILPASS }}"
           SECRETKEY: "${{ secrets.SECRETKEY }}"
+    - name: DigitalOcean App Deployment Action
+      uses: rdarida/digitalocean-app-deployment-action@v1.0.2
+      with:
+        token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+        appId: clipr-auth
