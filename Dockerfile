@@ -3,7 +3,8 @@ FROM node:lts-alpine
 
 #secrets
 RUN --mount=type=secret,id=NODE_ENV \
-  export NODE_ENV=$(cat /run/secrets/NODE_ENV)
+  export NODE_ENV=$(cat /run/secrets/NODE_ENV) \
+  echo NODE_ENV
 RUN --mount=type=secret,id=PGHOST \
   export PGHOST=$(cat /run/secrets/PGHOST)
 RUN --mount=type=secret,id=PGPORT \
