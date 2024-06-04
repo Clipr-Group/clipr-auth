@@ -22,7 +22,7 @@ jobs:
       uses: Clipr-Group/ghcr-action@v1
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        secrets: |
+        build-args: |
           "NODE_ENV=${{ secrets.NODE_ENV }}"
           "PGHOST=${{ secrets.PGHOST }}"
           "PGPORT=${{ secrets.PGPORT }}"

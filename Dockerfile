@@ -2,33 +2,32 @@
 FROM node:lts-alpine
 
 #secrets
-RUN --mount=type=secret,id=NODE_ENV \
-  export NODE_ENV=$(cat /run/secrets/NODE_ENV) && \
-  echo $NODE_ENV
+ARG NODE_ENV
+ENV NODE_ENV ${NODE_ENV}
 
-RUN --mount=type=secret,id=PGHOST \
-  export PGHOST=$(cat /run/secrets/PGHOST)
+ARG PGHOST
+ENV PGHOST ${PGHOST}
 
-RUN --mount=type=secret,id=PGPORT \
-  export PGPORT=$(cat /run/secrets/PGPORT)
+ARG PGPORT
+ENV PGPORT ${PGPORT}
 
-RUN --mount=type=secret,id=PGDATABASE \
-  export PGDATABASE=$(cat /run/secrets/PGDATABASE)
+ARG PGDATABASE
+ENV PGDATABASE ${PGDATABASE}
 
-RUN --mount=type=secret,id=PGUSER \
-  export PGUSER=$(cat /run/secrets/PGUSER)
+ARG PGUSER
+ENV PGUSER ${PGUSER}
 
-RUN --mount=type=secret,id=PGPASSWORD \
-  export PGPASSWORD=$(cat /run/secrets/PGPASSWORD)
+ARG PGPASSWORD
+ENV PGPASSWORD ${PGPASSWORD}
 
-RUN --mount=type=secret,id=MAILUSER \
-  export MAILUSER=$(cat /run/secrets/MAILUSER)
+ARG MAILUSER
+ENV MAILUSER ${MAILUSER}
 
-RUN --mount=type=secret,id=MAILPASS \
-  export MAILPASS=$(cat /run/secrets/MAILPASS)
+ARG MAILPASS
+ENV MAILPASS ${MAILPASS}
   
-RUN --mount=type=secret,id=SECRETKEY \
-  export SECRETKEY=$(cat /run/secrets/SECRETKEY)
+ARG SECRETKEY
+ENV SECRETKEY ${SECRETKEY}
 
 WORKDIR /usr/app
 COPY package*.json ./
