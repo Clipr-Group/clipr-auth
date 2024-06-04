@@ -18,23 +18,23 @@ jobs:
       matrix:
         node-version: [18.x]
     steps:
-    - uses: actions/checkout@v3
     - name: Push to Github Container Repository
-      uses: KuhlTime/ghcr-action@v1
+      uses: Clipr-Group/ghcr-action
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        build-args: |
-          NODE_ENV: "${{ secrets.NODE_ENV }}"
-          PGHOST: "${{ secrets.PGHOST }}"
-          PGPORT: "${{ secrets.PGPORT }}"
-          PGDATABASE: "${{ secrets.PGDATABASE }}"
-          PGUSER: "${{ secrets.PGUSER }}"
-          PGPASSWORD: "${{ secrets.PGPASSWORD }}"
-          MAILUSER: "${{ secrets.MAILUSER }}"
-          MAILPASS: "${{ secrets.MAILPASS }}"
-          SECRETKEY: "${{ secrets.SECRETKEY }}"
+        secrets: |
+          NODE_ENV: ${{ secrets.NODE_ENV }}
+          PGHOST: ${{ secrets.PGHOST }}
+          PGPORT: ${{ secrets.PGPORT }}
+          PGDATABASE: ${{ secrets.PGDATABASE }}
+          PGUSER: ${{ secrets.PGUSER }}
+          PGPASSWORD: ${{ secrets.PGPASSWORD }}
+          MAILUSER: ${{ secrets.MAILUSER }}
+          MAILPASS: ${{ secrets.MAILPASS }}
+          SECRETKEY: ${{ secrets.SECRETKEY }}
+          
     - name: DigitalOcean App Deployment Action
       uses: rdarida/digitalocean-app-deployment-action@v1.0.2
       with:
         token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-        appId: clipr-auth
+        appId: ${{ secrets.DIGITALOCEAN_APP_ID }}

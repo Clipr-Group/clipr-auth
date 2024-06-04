@@ -1,24 +1,25 @@
+# syntax=docker/dockerfile:1
 FROM node:lts-alpine
 
-ARG NODE_ENV=${NODE_ENV}
-ARG PGHOST=${PGHOST}
-ARG PGPORT=${PGPORT}
-ARG PGDATABASE=${PGDATABASE}
-ARG PGUSER=${PGUSER}
-ARG PGPASSWORD=${PGPASSWORD}
-ARG MAILUSER=${MAILUSER}
-ARG MAILPASS=${MAILPASS}
-ARG SECRETKEY=${SECRETKEY}
-
-ENV NODE_ENV=${NODE_ENV}
-ENV PGHOST=${PGHOST}
-ENV PGPORT=${PGPORT}
-ENV PGDATABASE=${PGDATABASE}
-ENV PGUSER=${PGUSER}
-ENV PGPASSWORD=${PGPASSWORD}
-ENV MAILUSER=${MAILUSER}
-ENV MAILPASS=${MAILPASS}
-ENV SECRETKEY=${SECRETKEY}
+#secrets
+RUN --mount=type=secret,id=NODE_ENV \
+  export NODE_ENV=$(cat /run/secrets/NODE_ENV)
+RUN --mount=type=secret,id=PGHOST \
+  export PGHOST=$(cat /run/secrets/PGHOST)
+RUN --mount=type=secret,id=PGPORT \
+  export PGPORT=$(cat /run/secrets/PGPORT)
+RUN --mount=type=secret,id=PGDATABASE \
+  export PGDATABASE=$(cat /run/secrets/PGDATABASE)
+RUN --mount=type=secret,id=PGUSER \
+  export PGUSER=$(cat /run/secrets/PGUSER)
+RUN --mount=type=secret,id=PGPASSWORD \
+  export PGPASSWORD=$(cat /run/secrets/PGPASSWORD)
+RUN --mount=type=secret,id=MAILUSER \
+  export MAILUSER=$(cat /run/secrets/MAILUSER)
+RUN --mount=type=secret,id=MAILPASS \
+  export MAILPASS=$(cat /run/secrets/MAILPASS)
+RUN --mount=type=secret,id=SECRETKEY \
+  export SECRETKEY=$(cat /run/secrets/SECRETKEY)
 
 WORKDIR /usr/app
 COPY package*.json ./
