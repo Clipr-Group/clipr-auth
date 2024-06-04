@@ -2,6 +2,7 @@
 
 //serverless & express stuff
 const express = require("express");
+const morgan = require("morgan");
 
 const app = express();
 const bodyParser = require('body-parser');
@@ -19,6 +20,8 @@ const emailregex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
 app.use(bodyParser.json());
 //get user agent details
 app.use(useragent.express());
+//http request logging
+app.use(morgan('dev'));
 
 //token stuff
 const crypto = require('crypto');
