@@ -23,15 +23,15 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         secrets: |
-          NODE_ENV: ${{ secrets.NODE_ENV }}
-          PGHOST: ${{ secrets.PGHOST }}
-          PGPORT: ${{ secrets.PGPORT }}
-          PGDATABASE: ${{ secrets.PGDATABASE }}
-          PGUSER: ${{ secrets.PGUSER }}
-          PGPASSWORD: ${{ secrets.PGPASSWORD }}
-          MAILUSER: ${{ secrets.MAILUSER }}
-          MAILPASS: ${{ secrets.MAILPASS }}
-          SECRETKEY: ${{ secrets.SECRETKEY }}
+          "NODE_ENV: ${{ secrets.NODE_ENV }}"
+          "PGHOST: ${{ secrets.PGHOST }}"
+          "PGPORT: ${{ secrets.PGPORT }}"
+          "PGDATABASE: ${{ secrets.PGDATABASE }}"
+          "PGUSER: ${{ secrets.PGUSER }}"
+          "PGPASSWORD: ${{ secrets.PGPASSWORD }}"
+          "MAILUSER: ${{ secrets.MAILUSER }}"
+          "MAILPASS: ${{ secrets.MAILPASS }}"
+          "SECRETKEY: ${{ secrets.SECRETKEY }}"
           
     - name: DigitalOcean App Deployment Action
       uses: rdarida/digitalocean-app-deployment-action@v1.0.2
