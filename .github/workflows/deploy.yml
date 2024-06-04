@@ -19,7 +19,7 @@ jobs:
         node-version: [18.x]
     steps:
     - name: Push to Github Container Repository
-      uses: Clipr-Group/ghcr-action
+      uses: Clipr-Group/ghcr-action@v1
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         secrets: |
