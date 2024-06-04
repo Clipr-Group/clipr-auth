@@ -18,6 +18,6 @@ jobs:
           owner: Clipr-Group
           name: clipr-auth
           # NOTE: using Personal Access Token
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PRUNE_IMAGE_TOKEN }}
           # Keep latest N untagged images
           untagged-keep-latest: 3
