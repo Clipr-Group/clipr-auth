@@ -138,7 +138,7 @@ async function createUser(email) {
 /**
  * creates and stores 6 digit OTP in database
  * @param {String} email 
- * @returns
+ * @returns {String} otp
  */
 async function createOTP(email) {
   //generate 6 digit OTP
