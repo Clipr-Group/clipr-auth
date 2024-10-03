@@ -142,7 +142,7 @@ async function createUser(email) {
  */
 async function createOTP(email) {
   //generate 6 digit OTP
-  var digits = '0123456789';
+  const digits = '0123456789';
   let otp = '';
   for (let i = 0; i < 6; i++ ) {
       otp += digits[Math.floor(Math.random() * 10)];
@@ -172,7 +172,7 @@ async function createOTP(email) {
  * @returns {Boolean} validation result
  */
 async function validateOTP(email, otp) {
-  var p = new Promise((resolve, reject) => {
+  let p = new Promise((resolve, reject) => {
     sql`
       SELECT otp.hashed_otp, otp.salt, otp.expires FROM auth2.otp
       WHERE email = ${email}
@@ -315,8 +315,8 @@ app.post("/otp", validate({
 
   const email = req.body.email
   const location = '';
-  var otp;
-  var mail;
+  let otp;
+  let mail;
   try{
     //create and save otp in db
     otp = await createOTP(email);
