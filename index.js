@@ -314,7 +314,6 @@ app.post("/otp", validate({
   }
 
   const email = req.body.email
-  const location = '';
   let otp;
   let mail;
   try{
