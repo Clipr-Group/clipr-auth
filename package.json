@@ -7,6 +7,8 @@
     "@types/bun": "latest"
   },
   "dependencies": {
+    "errsole": "^2.11.3",
+    "errsole-mysql": "^2.1.0",
     "express": "^5.0.0",
     "express-useragent": "^1.0.15",
     "express-validation": "^4.1.0",

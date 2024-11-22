@@ -14,6 +14,24 @@ const sql = require("./db");
 const mailer = require("./mailer");
 const emailregex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
 
+//logging
+const errsole = require('errsole');
+const ErrsoleMySQL = require('errsole-mysql');
+
+errsole.initialize({
+  storage: new ErrsoleMySQL({
+    'host': process.env.LOGS_HOST,
+    'port': process.env.LOGS_PORT,
+    'user': process.env.LOGS_USER,
+    'password': process.env.LOGS_PASSWORD,
+    'database': process.env.LOGS_DATABASE
+  }),
+  enableConsoleOutput: true,
+  enableDashboard: false,
+  appName: 'clipr-auth',
+  serverName: 'clipr-auth'
+});
+
 
 //handle posts
 app.use(bodyParser.json());
@@ -471,7 +489,7 @@ app.use(function (err, req, res, next) {
   if (err instanceof ValidationError) {
     return res.status(err.statusCode).json(err);
   }
-  console.error(err)
+  errsole.meta({ reqBody: req.body }).error(err);
   return res.status(500).json({ error: 'Internal Server Error' });
 });
 

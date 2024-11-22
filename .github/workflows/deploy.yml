@@ -32,6 +32,11 @@ jobs:
           "MAILUSER=${{ secrets.MAILUSER }}"
           "MAILPASS=${{ secrets.MAILPASS }}"
           "SECRETKEY=${{ secrets.SECRETKEY }}"
+          "LOGS_HOST=${{ secrets.LOGS_HOST }}"
+          "LOGS_PORT=${{ secrets.LOGS_PORT }}"
+          "LOGS_USER=${{ secrets.LOGS_USER }}"
+          "LOGS_PASSWORD=${{ secrets.LOGS_PASSWORD }}"
+          "LOGS_DATABASE=${{ secrets.LOGS_DATABASE }}"
           
     - name: DigitalOcean App Deployment Action
       uses: rdarida/digitalocean-app-deployment-action@v1.0.2
