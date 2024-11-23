@@ -4,7 +4,9 @@ on:
   push:
     branches:
       - main
-
+  # or manually
+  workflow_dispatch:
+    
 # Required for secrets.GITHUB_TOKEN
 permissions:
   packages: write
