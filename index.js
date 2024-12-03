@@ -260,15 +260,6 @@ async function removeSession(sessionID) {
 -----------------------------------------------------------------------
 */
 
-/**
- * Base Path
- * CHANGEME Remove for prod
- */
-app.get("/", (req, res, next) => {
-  return res.status(200).json({
-    message: "Hello from root!",
-  });
-});
 
 
 
@@ -478,17 +469,17 @@ app.post("/token/revoke", validate({
   
 });
 
-app.use((req, res, next) => {
-  return res.status(404).json({
-    error: "Not Found",
-  });
-});
 
 //error handling
 app.use(function (err, req, res, next) {
   if (err instanceof ValidationError) {
     return res.status(err.statusCode).json(err);
   }
+
+  if (err.statusCode == 404) {
+    return res.status(404).json({ error: "Not Found" });
+  }
+
   errsole.meta({ reqBody: req.body }).error(err);
   return res.status(500).json({ error: 'Internal Server Error' });
 });
