@@ -40,8 +40,12 @@ jobs:
           "LOGS_PASSWORD=${{ secrets.LOGS_PASSWORD }}"
           "LOGS_DATABASE=${{ secrets.LOGS_DATABASE }}"
           
-    - name: DigitalOcean App Deployment Action
-      uses: rdarida/digitalocean-app-deployment-action@v1.0.2
-      with:
-        token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-        appId: ${{ secrets.DIGITALOCEAN_APP_ID }}
+    - name: DigitalOcean App Deployment
+      run: >-
+        curl
+        -s
+        -X POST
+        -H "Content-Type: application/json"
+        -H "Authorization: Bearer ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}"
+        "https://api.digitalocean.com/v2/apps/${{ secrets.DIGITALOCEAN_APP_ID }}/deployments"
+      shell: bash
