@@ -451,6 +451,9 @@ app.post("/token/revoke", validate({
   
 });
 
+app.get("/health", async (req, res, next) => {
+    return res.status(200).send("OK")
+});
 
 //error handling
 app.use(function (err, req, res, next) {
