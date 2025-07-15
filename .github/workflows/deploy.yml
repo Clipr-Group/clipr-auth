@@ -39,13 +39,3 @@ jobs:
           "LOGS_USER=${{ secrets.LOGS_USER }}"
           "LOGS_PASSWORD=${{ secrets.LOGS_PASSWORD }}"
           "LOGS_DATABASE=${{ secrets.LOGS_DATABASE }}"
-          
-    - name: DigitalOcean App Deployment
-      run: >-
-        curl
-        -s
-        -X POST
-        -H "Content-Type: application/json"
-        -H "Authorization: Bearer ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}"
-        "https://api.digitalocean.com/v2/apps/${{ secrets.DIGITALOCEAN_APP_ID }}/deployments"
-      shell: bash
