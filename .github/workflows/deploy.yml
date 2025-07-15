@@ -39,3 +39,4 @@ jobs:
           "LOGS_USER=${{ secrets.LOGS_USER }}"
           "LOGS_PASSWORD=${{ secrets.LOGS_PASSWORD }}"
           "LOGS_DATABASE=${{ secrets.LOGS_DATABASE }}"
+        platforms: linux/amd64,linux/arm64
