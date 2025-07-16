@@ -479,7 +479,8 @@ app.use(function (err, req, res, next) {
       error: err,
       meta: {reqBody: req.body, params: req.params}
     }
-    });
+  });
+  console.error(err);
 
   return res.status(500).json({ error: 'Internal Server Error' });
 });
