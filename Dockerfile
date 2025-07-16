@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile:1
 FROM node:lts-alpine
+RUN apk add --no-cache curl
 
 #secrets
 ARG NODE_ENV
