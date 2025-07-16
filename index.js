@@ -13,12 +13,6 @@ const sql = require("./db");
 const mailer = require("./mailer");
 const emailregex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
 
-//health flag
-let isHealthy = true;
-
-//hold flag
-let hold;
-
 //logging
 const logger = require('./logger');
 
@@ -459,12 +453,8 @@ app.post("/token/revoke", validate({
   
 });
 
-app.get("/health", async (req, res, next) => {
-  if (isHealthy) {
+app.get("/up", async (req, res, next) => {
     return res.status(200).send("AUTH OK");
-  } else {
-    return res.status(500).send("AUTH SHUTTING DOWN");
-  }
 });
 
 app.get("/debug", async (req, res, next) => {
@@ -506,14 +496,9 @@ process.on('SIGTERM', () => {
     server.getConnections((err, count) => {
         console.log('Active connections at shutdown: ', count);
     });
-    setTimeout(() => {
-      console.log('Calling server.close() at', new Date());
-      server.close(() => {
-        console.log('Connections closed at ' + new Date());
-      });
-    }, 20000);
-    
-    //keeps event loop held open, don't ask why
-    hold = setTimeout(() => {}, 30000);
+    console.log('Calling server.close() at', new Date());
+    server.close(() => {
+      console.log('Connections closed at ' + new Date());
+    });
   }
 });
