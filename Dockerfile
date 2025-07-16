@@ -1,5 +1,7 @@
 # syntax=docker/dockerfile:1
 FROM node:lts-alpine
+LABEL service="clipr-auth"
+
 RUN apk add --no-cache curl
 
 #secrets
