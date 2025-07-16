@@ -1,8 +1,8 @@
 // index.js
 
-//serverless & express stuff
+//express stuff
 const express = require("express");
-
+const http = require('http');
 const app = express();
 const bodyParser = require('body-parser');
 const useragent = require('express-useragent');
@@ -13,6 +13,11 @@ const sql = require("./db");
 //mailer
 const mailer = require("./mailer");
 const emailregex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+
+//health flag
+let isHealthy = true;
+
+//logging
 
 
 //handle posts
@@ -452,7 +457,11 @@ app.post("/token/revoke", validate({
 });
 
 app.get("/health", async (req, res, next) => {
-    return res.status(200).send("OK")
+  if (isHealthy) {
+    return res.status(200).send("AUTH OK");
+  } else {
+    return res.status(500).send("AUTH SHUTTING DOWN");
+  }
 });
 
 //error handling
@@ -464,12 +473,32 @@ app.use(function (err, req, res, next) {
   if (err.statusCode == 404) {
     return res.status(404).json({ error: "Not Found" });
   }
+  
+  logger.error({
+    message: {
+      type: `Unhandled Exception: ${req.method} ${req.originalUrl}`,
+      error: err,
+      meta: {reqBody: req.body, params: req.params}
+    }
+  });
 
-  //errsole.meta({ reqBody: req.body }).error(err);
   return res.status(500).json({ error: 'Internal Server Error' });
 });
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
+const server = http.createServer(app);
+server.listen(PORT, () => {
   console.log(`Clipr-Auth started on port ${PORT}`);
+});
+
+process.on('SIGTERM', () => {
+  if (process.env.NODE_ENV !== 'dev') {
+    console.log("SIGTERM received");
+    setTimeout(() => {
+      server.close(() => {
+        console.log('Graceful shutdown complete');
+        process.exit(0);
+      });
+    }, 20000);
+  }
 });

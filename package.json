@@ -7,15 +7,15 @@
     "@types/bun": "latest"
   },
   "dependencies": {
-    "errsole": "^2.11.3",
-    "errsole-mysql": "^2.1.0",
     "express": "^5.0.0",
     "express-useragent": "^1.0.15",
     "express-validation": "^4.1.0",
     "jsonwebtoken": "^9.0.2",
     "nanoid": "^3.3.7",
     "nodemailer": "^6.9.13",
-    "postgres": "^3.4.4"
+    "postgres": "^3.4.4",
+    "winston": "^3.17.0",
+    "winston-loki": "^6.1.3"
   },
   "scripts": {
     "dev": "tunnelto --subdomain clipr-auth --port 4000 & node --watch -- --env-file .env index.js",

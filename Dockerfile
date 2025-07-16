@@ -50,3 +50,6 @@ RUN npm install --only=production
 COPY . .
 EXPOSE 4000
 CMD ["npm", "run", "prod"]
+
+HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=2 \
+  CMD curl -f http://localhost:4000/health || exit 1
