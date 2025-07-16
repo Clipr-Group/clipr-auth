@@ -457,12 +457,6 @@ app.get("/up", async (req, res, next) => {
     return res.status(200).send("AUTH OK");
 });
 
-app.get("/debug", async (req, res, next) => {
-  setTimeout(() => {
-    return res.status(200).send("OK")
-  }, 10000);
-});
-
 //error handling
 app.use(function (err, req, res, next) {
   if (err instanceof ValidationError) {
