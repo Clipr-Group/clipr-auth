@@ -16,6 +16,9 @@ const emailregex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
 //health flag
 let isHealthy = true;
 
+//hold flag
+let hold;
+
 //logging
 const logger = require('./logger');
 
@@ -464,6 +467,12 @@ app.get("/health", async (req, res, next) => {
   }
 });
 
+app.get("/debug", async (req, res, next) => {
+  setTimeout(() => {
+    return res.status(200).send("OK")
+  }, 10000);
+});
+
 //error handling
 app.use(function (err, req, res, next) {
   if (err instanceof ValidationError) {
@@ -494,13 +503,17 @@ server.listen(PORT, () => {
 process.on('SIGTERM', () => {
   if (process.env.NODE_ENV !== 'dev') {
     console.log("SIGTERM received at " + new Date());
+    server.getConnections((err, count) => {
+        console.log('Active connections at shutdown: ', count);
+    });
     setTimeout(() => {
+      console.log('Calling server.close() at', new Date());
       server.close(() => {
         console.log('Connections closed at ' + new Date());
       });
     }, 20000);
     
     //keeps event loop held open, don't ask why
-    const hold = setTimeout(() => {}, 30000);
+    hold = setTimeout(() => {}, 30000);
   }
 });
