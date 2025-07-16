@@ -2,7 +2,7 @@
 service: clipr-auth
 
 # Name of the container image.
-image: ghcr.io/clipr-group/clipr-auth
+image: clipr-group/clipr-auth
 
 # Deploy to these servers.
 servers:
