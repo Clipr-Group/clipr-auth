@@ -493,11 +493,14 @@ server.listen(PORT, () => {
 
 process.on('SIGTERM', () => {
   if (process.env.NODE_ENV !== 'dev') {
-    console.log("SIGTERM received");
+    console.log("SIGTERM received at " + new Date());
     setTimeout(() => {
       server.close(() => {
-        console.log('Connections closed');
+        console.log('Connections closed at ' + new Date());
       });
     }, 20000);
+    
+    //keeps event loop held open, don't ask why
+    const hold = setTimeout(() => {}, 30000);
   }
 });
