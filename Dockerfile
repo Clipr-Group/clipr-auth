@@ -49,10 +49,10 @@ ENV LOGS_DATABASE ${LOGS_DATABASE}
 
 WORKDIR /usr/app
 COPY package*.json ./
-RUN npm install --only=production
+RUN npm install pm2 -g && npm install --only=production
 COPY . .
 EXPOSE 4000
-CMD ["npm", "run", "prod"]
+CMD ["pm2-runtime", "pm2.config.js"]
 
 HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=2 \
   CMD curl -f http://localhost:4000/up || exit 1
