@@ -496,8 +496,7 @@ process.on('SIGTERM', () => {
     console.log("SIGTERM received");
     setTimeout(() => {
       server.close(() => {
-        console.log('Graceful shutdown complete');
-        process.exit(0);
+        console.log('Connections closed');
       });
     }, 20000);
   }
