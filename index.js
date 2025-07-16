@@ -18,6 +18,7 @@ const emailregex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
 let isHealthy = true;
 
 //logging
+const logger = require('./logger');
 
 
 //handle posts

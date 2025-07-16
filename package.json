@@ -19,6 +19,7 @@
   },
   "scripts": {
     "dev": "tunnelto --subdomain clipr-auth --port 4000 & node --watch -- --env-file .env index.js",
+    "local": "node --watch -- --env-file .env index.js",
     "devcontainer": "node --watch -- --env-file .env index.js",
     "prod": "node index.js"
   }
