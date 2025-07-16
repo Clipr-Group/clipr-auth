@@ -4,7 +4,6 @@
 const express = require("express");
 const http = require('http');
 const app = express();
-const bodyParser = require('body-parser');
 const useragent = require('express-useragent');
 const { validate, ValidationError, Joi } = require('express-validation');
 
@@ -18,11 +17,11 @@ const emailregex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
 let isHealthy = true;
 
 //logging
-//const logger = require('./logger');
+const logger = require('./logger');
 
 
 //handle posts
-app.use(bodyParser.json());
+app.use(express.json());
 //get user agent details
 app.use(useragent.express());
 
@@ -475,13 +474,13 @@ app.use(function (err, req, res, next) {
     return res.status(404).json({ error: "Not Found" });
   }
   
-  /*logger.error({
+  logger.error({
     message: {
       type: `Unhandled Exception: ${req.method} ${req.originalUrl}`,
       error: err,
       meta: {reqBody: req.body, params: req.params}
     }
-    });*/
+    });
 
   return res.status(500).json({ error: 'Internal Server Error' });
 });
