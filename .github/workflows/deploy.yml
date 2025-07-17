@@ -16,6 +16,9 @@ jobs:
   deploy:
     name: deploy
     runs-on: ubuntu-latest
+    env:
+      KAMAL_REGISTRY_PASSWORD: ${{ secrets.KAMAL_REGISTRY_PASSWORD }}
+      KAMAL_REGISTRY_USERNAME: ${{ secrets.KAMAL_REGISTRY_USERNAME }}
     strategy:
       matrix:
         node-version: [18.x]
@@ -40,3 +43,19 @@ jobs:
           "LOGS_PASSWORD=${{ secrets.LOGS_PASSWORD }}"
           "LOGS_DATABASE=${{ secrets.LOGS_DATABASE }}"
         platforms: linux/amd64,linux/arm64
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: 3.3.0
+        bundler-cache: true
+    - name: Install Kamal
+      run: gem install kamal
+    - name: Connect to Tailscale
+      uses: tailscale/github-action@v3
+      with:
+        authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+    - name: Run deploy command
+      run: kamal deploy -P -v --version latest
+    
