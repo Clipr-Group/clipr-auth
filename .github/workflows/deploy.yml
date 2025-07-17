@@ -55,11 +55,11 @@ jobs:
     - name: Install Kamal
       run: gem install kamal
     - name: Connect to Tailscale
-      uses: Pikachews/tailscale-action@v1
+      uses: tailscale/github-action@v3
       with:
         authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+    - name: release kamal lock
+      run: kamal lock release
     - name: Run deploy command
       run: kamal deploy -P -v --version latest
-      env:
-        SSH_OPTIONS: -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
     
