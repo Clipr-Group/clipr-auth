@@ -5,7 +5,7 @@ const LokiTransport = require("winston-loki");
 const options = {
   transports: [
       new LokiTransport({
-        host: "http://100.116.216.5:3100",
+        host: "http://clipr-tools.follow-ruffe.ts.net:3100",
         labels: { app: 'clipr-api' },
         json: true,
         format: winston.format.json(),
