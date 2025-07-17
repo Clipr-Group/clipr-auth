@@ -474,7 +474,6 @@ app.use(function (err, req, res, next) {
       meta: {reqBody: req.body, params: req.params}
     }
   });
-  console.error(err);
 
   return res.status(500).json({ error: 'Internal Server Error' });
 });
@@ -483,6 +482,7 @@ const PORT = process.env.PORT || 4000;
 const server = http.createServer(app);
 server.listen(PORT, () => {
   console.log(`Clipr-Auth started on port ${PORT}`);
+  logger.info("Clipr-Auth started");
 });
 
 process.on('SIGTERM', () => {

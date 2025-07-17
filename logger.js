@@ -1,9 +1,12 @@
-const { createLogger, transports } = require("winston");
 const winston = require("winston");
 const LokiTransport = require("winston-loki");
 
 const options = {
   transports: [
+      new winston.transports.Console({
+        format: winston.format.simple()
+      }),
+    
       new LokiTransport({
         host: "http://clipr-tools.follow-ruffe.ts.net:3100",
         labels: { app: 'clipr-api' },
@@ -15,6 +18,6 @@ const options = {
     ]
 }
 
-const logger = createLogger(options);
+const logger = winston.createLogger(options);
 
 module.exports = logger;
