@@ -55,7 +55,7 @@ jobs:
     - name: Install Kamal
       run: gem install kamal
     - name: Connect to Tailscale
-      uses: tailscale/github-action@v3
+      uses: Pikachews/tailscale-action@v1
       with:
         authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
     - name: Run deploy command
