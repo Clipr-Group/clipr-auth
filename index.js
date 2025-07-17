@@ -481,8 +481,7 @@ app.use(function (err, req, res, next) {
 const PORT = process.env.PORT || 4000;
 const server = http.createServer(app);
 server.listen(PORT, () => {
-  console.log(`Clipr-Auth started on port ${PORT}`);
-  logger.info("Clipr-Auth started");
+  logger.info(`Clipr-Auth started on port ${PORT}`);
 });
 
 process.on('SIGTERM', () => {

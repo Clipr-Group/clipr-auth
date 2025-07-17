@@ -9,11 +9,13 @@ const options = {
     
       new LokiTransport({
         host: "http://clipr-tools.follow-ruffe.ts.net:3100",
-        labels: { app: 'clipr-api' },
+        labels: { app: 'clipr-auth' },
         json: true,
         format: winston.format.json(),
         replaceTimestamp: true,
         onConnectionError: (err) => console.error(err),
+        batching: true,
+        interval: 5
       })
     ]
 }
