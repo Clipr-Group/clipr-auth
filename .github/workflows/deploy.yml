@@ -1,5 +1,7 @@
 name: Deploy main branch
-
+concurrency:
+  group: production
+  cancel-in-progress: true
 on:
   push:
     branches:
@@ -57,5 +59,7 @@ jobs:
       with:
         authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
     - name: Run deploy command
-      run: kamal deploy -P -v --version latest
+      run: kamal deploy -P --version latest
+      env:
+        SSH_OPTIONS: -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
     
