@@ -59,7 +59,7 @@ jobs:
       with:
         authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
     - name: Run deploy command
-      run: kamal deploy -P --version latest
+      run: kamal deploy -P -v --version latest
       env:
         SSH_OPTIONS: -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
     
