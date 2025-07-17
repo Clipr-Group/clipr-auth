@@ -58,8 +58,14 @@ jobs:
       uses: tailscale/github-action@v3
       with:
         authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+    - name: Test SSH Connection
+      run: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@100.113.203.50 'echo ok'
     - name: release kamal lock
       run: kamal lock release
+      env:
+        SSH_OPTIONS: -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -v
     - name: Run deploy command
       run: kamal deploy -P -v --version latest
+      env:
+        SSH_OPTIONS: -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -v
     
