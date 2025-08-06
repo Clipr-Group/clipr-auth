@@ -422,7 +422,7 @@ app.post("/token/refresh", validate({
     }
     return res.status(401).json({ error: 'Invalid Token' });
   } catch (err) {
-    return res.status(401).json({ error: err.message });
+    return res.status(401).json({ error: "Unable to refresh" });
   }
 });
 

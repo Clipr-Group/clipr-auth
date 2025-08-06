@@ -32,6 +32,8 @@ jobs:
         build-args: |
           "NODE_ENV=${{ secrets.NODE_ENV }}"
           "PGHOST=${{ secrets.PGHOST }}"
+          "PGHOST2=${{ secrets.PGHOST2 }}"
+          "PGHOST3=${{ secrets.PGHOST3 }}"
           "PGPORT=${{ secrets.PGPORT }}"
           "PGDATABASE=${{ secrets.PGDATABASE }}"
           "PGUSER=${{ secrets.PGUSER }}"
@@ -40,10 +42,6 @@ jobs:
           "MAILPASS=${{ secrets.MAILPASS }}"
           "SECRETKEY=${{ secrets.SECRETKEY }}"
           "LOGS_HOST=${{ secrets.LOGS_HOST }}"
-          "LOGS_PORT=${{ secrets.LOGS_PORT }}"
-          "LOGS_USER=${{ secrets.LOGS_USER }}"
-          "LOGS_PASSWORD=${{ secrets.LOGS_PASSWORD }}"
-          "LOGS_DATABASE=${{ secrets.LOGS_DATABASE }}"
         platforms: linux/amd64,linux/arm64
     - name: Checkout code
       uses: actions/checkout@v4
