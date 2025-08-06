@@ -8,7 +8,7 @@ const options = {
       }),
     
       new LokiTransport({
-        host: "http://clipr-tools.follow-ruffe.ts.net:3100",
+        host: process.env.LOGS_HOST,
         labels: { app: 'clipr-auth' },
         json: true,
         format: winston.format.json(),
