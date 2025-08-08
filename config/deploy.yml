@@ -5,6 +5,7 @@ service: clipr-auth
 image: clipr-group/clipr-auth
 
 # Deploy to these servers.
+# !!! !!! !!! ENSURE PROD TAG ADDED IN TAILSCALE & KAMAL SERVER BOOTSTRAP !!! !!! !!!
 servers:
   web:
     - clipr-api2
