@@ -8,6 +8,7 @@ image: clipr-group/clipr-auth
 servers:
   web:
     - clipr-api2
+    - clipr-api
   # job:
   #   hosts:
   #     - 192.168.0.1
