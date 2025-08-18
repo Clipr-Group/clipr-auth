@@ -11,9 +11,6 @@ const nodes = [
 let sqlClient = postgres({
   idle_timeout: 10,
   max_lifetime: 20,
-  ssl: {
-    rejectUnauthorized: false
-  }
 });
 
 //proxy
@@ -45,9 +42,6 @@ setInterval(async () => {
         host: leader,
         idle_timeout: 10,
         max_lifetime: 20,
-        ssl: {
-          rejectUnauthorized: false
-        }
       });
     }
   } catch (err) {
