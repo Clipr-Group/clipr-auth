@@ -9,7 +9,7 @@ const options = {
     
       new LokiTransport({
         host: process.env.LOGS_HOST,
-        labels: { app: 'clipr-auth' },
+        labels: { app: process.env.APP_NAME },
         json: true,
         format: winston.format.json(),
         replaceTimestamp: true,
