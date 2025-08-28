@@ -11,6 +11,7 @@ const options = {
         host: process.env.LOGS_HOST,
         labels: { app: process.env.APP_NAME },
         json: true,
+        basicAuth: process.env.GRAFANA_AUTH,
         format: winston.format.json(),
         replaceTimestamp: true,
         onConnectionError: (err) => console.error(err),

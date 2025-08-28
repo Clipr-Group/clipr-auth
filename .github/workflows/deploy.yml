@@ -43,6 +43,7 @@ jobs:
           "MAILPASS=${{ secrets.MAILPASS }}"
           "SECRETKEY=${{ secrets.SECRETKEY }}"
           "LOGS_HOST=${{ secrets.LOGS_HOST }}"
+          "GRAFANA_AUTH=${{ secrets.GRAFANA_AUTH }}"
         platforms: linux/amd64,linux/arm64
     - name: Checkout code
       uses: actions/checkout@v4

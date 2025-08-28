@@ -44,6 +44,9 @@ ENV SECRETKEY ${SECRETKEY}
 ARG LOGS_HOST
 ENV LOGS_HOST ${LOGS_HOST}
 
+ARG GRAFANA_AUTH
+ENV GRAFANA_AUTH ${GRAFANA_AUTH}
+
 WORKDIR /usr/app
 COPY package*.json ./
 RUN npm install pm2 -g && npm install --only=production
