@@ -1,6 +1,7 @@
 // ./db.js
 const postgres = require('postgres');
 const axios = require('axios');
+const logger = require('./logger');
 
 const nodes = [
   process.env.PGHOST,
@@ -36,7 +37,7 @@ setInterval(async () => {
     const current = sqlClient.options.host[0];
     
     if (leader && leader !== current) {
-      console.warn(`[db] Detected new leader: ${leader}, Rebuilding client...`);
+      logger.warn(`[db] Detected new leader: ${leader}, Rebuilding client...`);
       
       sqlClient = postgres({
         host: leader,
@@ -45,7 +46,7 @@ setInterval(async () => {
       });
     }
   } catch (err) {
-    console.error(`[db] Error pinging node ${nodeIP}: ${err.message}`);
+    logger.error(`[db] Error pinging node ${nodeIP}: ${err.message}`);
   }
   
   currentIndex++;
