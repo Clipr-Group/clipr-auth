@@ -33,8 +33,6 @@ jobs:
           "NODE_ENV=${{ secrets.NODE_ENV }}"
           "APP_NAME=${{ secrets.APP_NAME }}"
           "PGHOST=${{ secrets.PGHOST }}"
-          "PGHOST2=${{ secrets.PGHOST2 }}"
-          "PGHOST3=${{ secrets.PGHOST3 }}"
           "PGPORT=${{ secrets.PGPORT }}"
           "PGDATABASE=${{ secrets.PGDATABASE }}"
           "PGUSER=${{ secrets.PGUSER }}"
